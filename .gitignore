@@ -1,0 +1,17 @@
+# Binaries & build artifacts
+go-agy-tool/agy-tool
+*.o
+*.a
+*.so
+
+# Caches & temporary files
+*.cache
+*.tmp
+__pycache__/
+*.pyc
+.qmlls.ini
+.DS_Store
+
+# State files
+*.log
+*.qslog

@@ -1,0 +1,9 @@
+module qs.modules.common.widgets
+
+StyledPopup 1.0 StyledPopup.qml
+StyledText 1.0 StyledText.qml
+CustomIcon 1.0 CustomIcon.qml
+RippleButton 1.0 RippleButton.qml
+MaterialSymbol 1.0 MaterialSymbol.qml
+StyledToolTip 1.0 StyledToolTip.qml
+ClippedOutlineCircularProgress 1.0 ClippedOutlineCircularProgress.qml

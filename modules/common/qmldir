@@ -1,0 +1,5 @@
+module qs.modules.common
+
+singleton Theme 1.0 Theme.qml
+singleton Appearance 1.0 Appearance.qml
+singleton Translation 1.0 Translation.qml

@@ -1,0 +1,10 @@
+module qs.modules.bar
+
+TopBar 1.0 TopBar.qml
+WorkspacesPill 1.0 WorkspacesPill.qml
+ClockPill 1.0 ClockPill.qml
+HardwarePill 1.0 HardwarePill.qml
+AgyUsage 1.0 AgyUsage.qml
+AgyUsagePopup 1.0 AgyUsagePopup.qml
+SystemPill 1.0 SystemPill.qml
+QuickSettingsPopup 1.0 QuickSettingsPopup.qml

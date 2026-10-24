@@ -1,0 +1,4 @@
+module qs.services
+
+singleton NiriState 1.0 NiriState.qml
+singleton SystemStats 1.0 SystemStats.qml

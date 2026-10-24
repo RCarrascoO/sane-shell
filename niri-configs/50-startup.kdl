@@ -1,0 +1,44 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// 50 — Processes spawned at login
+// ─────────────────────────────────────────────────────────────────────────────
+// Each line runs once when Niri starts. For daemons that support it,
+// xdg-desktop-autostart (systemd) is an alternative.
+//
+// Tip: use spawn-sh-at-startup for shell pipelines or variable expansion.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Export XDG_MENU_PREFIX into the systemd user session and rebuild the
+// sycoca database so KDE/Qt apps see the correct .desktop entries.
+
+// Clipboard history: wl-paste watches the clipboard and cliphist stores it.
+spawn-at-startup "wl-paste" "--type" "text" "--watch" "cliphist" "store"
+spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
+
+// sane-shell (Android 16 Pixel UI + Catppuccin)
+spawn-at-startup "quickshell" "-c" "sane-shell"
+
+// Polkit authentication agent — needed for GUI sudo prompts (software install,
+// disk mount, etc.). iNiR's setup auto-detects which agent is installed and
+// patches this line accordingly (KDE, GNOME, MATE, LXQt, or lxpolkit).
+// spawn-at-startup "/usr/lib/polkit-kde-authentication-agent-1" // iNiR is the polkit agent now
+
+// ── iNiR shell ──────────────────────────────────────────────────────────────
+// >>> inir-managed-autostart >>>
+// Managed by iNiR Settings — add or remove entries via Settings › Autostart.
+// spawn-at-startup "gtk-launch" "org.corectrl.CoreCtrl"
+// spawn-at-startup "gtk-launch" "dev.lizardbyte.app.Sunshine"
+spawn-at-startup "gtk-launch" "vesktop"
+// spawn-at-startup "gtk-launch" "arch-update"
+// spawn-at-startup "gtk-launch" "freedownloadmanager"
+// spawn-at-startup "gtk-launch" "steam"
+// spawn-at-startup "gtk-launch" "com.github.wwmm.easyeffects"
+spawn-at-startup "gtk-launch" "antigravity"
+// <<< inir-managed-autostart <<<
+
+// Shell managed by quickshell -c sane-shell
+
+// BEGIN inir-systemd-environment
+// Export XDG_MENU_PREFIX into the systemd user session and rebuild the
+// sycoca database so KDE/Qt apps see the correct .desktop entries.
+spawn-at-startup "bash" "-c" "systemctl --user import-environment XDG_MENU_PREFIX && kbuildsycoca6"
+// END inir-systemd-environment
