@@ -42,11 +42,7 @@
   const agyCard = document.getElementById('agy-card');
   const agyStatusBadge = document.getElementById('agy-status-badge');
   const agyTaskTitle = document.getElementById('agy-task-title');
-  const agyMainLabel = document.getElementById('agy-main-label');
-  const agyMainVal = document.getElementById('agy-main-val');
-  const agyMainFill = document.getElementById('agy-main-fill');
-  const agyMainReset = document.getElementById('agy-main-reset');
-  const agyBucketsContainer = document.getElementById('agy-buckets-container');
+  const agyGroupsContainer = document.getElementById('agy-groups-container');
   const btnRefreshAgy = document.getElementById('btn-refresh-agy');
 
   // Audio & Mixer
@@ -220,13 +216,8 @@
         agyTaskTitle.textContent = state.agy.currentTask || 'En espera';
       }
 
-      if (agyMainLabel) agyMainLabel.textContent = state.agy.primaryLabel || 'Límite 5h';
-      if (agyMainVal) agyMainVal.textContent = `${agyPct}%`;
-      if (agyMainFill) agyMainFill.style.width = `${agyPct}%`;
-      if (agyMainReset) agyMainReset.textContent = `Reinicio en ${state.agy.primaryResetIn || '--'}`;
-
-      // Render Sub-buckets
-      renderAgyBuckets(state.agy.groups || []);
+      // Render Distinct AI Model Groups (Gemini, Claude, Argon, Zen)
+      renderAgyGroups(state.agy.groups || []);
     }
 
     // 3. Audio Master, Sinks & Mic
@@ -283,50 +274,129 @@
     }
   }
 
-  // --- Render Agy Sub-Buckets ---
-  function renderAgyBuckets(groups) {
-    if (!agyBucketsContainer) return;
-    agyBucketsContainer.innerHTML = '';
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // --- Render Distinct AI Model Groups (Gemini, Claude & GPT, Argon, Zen) ---
+  function renderAgyGroups(groups) {
+    if (!agyGroupsContainer) return;
+    agyGroupsContainer.innerHTML = '';
+
+    if (!groups || groups.length === 0) {
+      agyGroupsContainer.innerHTML = '<div style="color:var(--md-sys-color-outline); font-size:12px; text-align:center; padding:10px;">Cargando cuotas de modelos...</div>';
+      return;
+    }
 
     groups.forEach(g => {
-      if (!g.buckets) return;
-      g.buckets.forEach(b => {
-        const card = document.createElement('div');
-        card.className = 'agy-bucket-card';
+      const gName = g.displayName || '';
+      const gLower = gName.toLowerCase();
 
-        const header = document.createElement('div');
-        header.className = 'agy-bucket-header';
+      let categoryBadge = 'Google AI';
+      let subtitle = g.description || '';
+      let cardClass = 'group-gemini';
+      let accentColor = 'var(--col-gemini)';
+      let iconSvg = '';
 
-        const nameSpan = document.createElement('span');
-        let shortName = b.displayName.replace(' Limit Remaining', '').replace(' Remaining', '');
-        if (g.displayName.includes('Zen')) shortName = 'Zen ' + shortName;
-        nameSpan.textContent = shortName;
+      if (gLower.includes('claude') || gLower.includes('gpt') || gLower.includes('3p')) {
+        categoryBadge = 'Anthropic & OpenAI';
+        subtitle = 'Claude 3.5 Sonnet, Opus & GPT-OSS';
+        cardClass = 'group-claude';
+        accentColor = 'var(--col-claude)';
+        iconSvg = '<svg class="group-icon icon-claude" viewBox="0 0 24 24"><path d="M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zm-2 10H6V7h12v12zm-9-6c-.83 0-1.5-.67-1.5-1.5S8.17 10 9 10s1.5.67 1.5 1.5S9.83 13 9 13zm6 0c-.83 0-1.5-.67-1.5-1.5S14.17 10 15 10s1.5.67 1.5 1.5S15.83 13 15 13z"/></svg>';
+      } else if (gLower.includes('argon')) {
+        categoryBadge = 'Deep Thinking';
+        subtitle = 'Gemini 4 Argon (Ultra Quota)';
+        cardClass = 'group-argon';
+        accentColor = 'var(--col-argon)';
+        iconSvg = '<svg class="group-icon icon-argon" viewBox="0 0 24 24"><path d="M19.8 18.4L14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6zM6.88 18l3.62-4.83.5-.67V6h2v6.5l.5.67L17.12 18H6.88z"/></svg>';
+      } else if (gLower.includes('zen') || gLower.includes('web')) {
+        categoryBadge = 'Zen Browser';
+        subtitle = 'Zen Web Quota (Flash Alto)';
+        cardClass = 'group-zen';
+        accentColor = 'var(--col-zen)';
+        iconSvg = '<svg class="group-icon icon-zen" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>';
+      } else {
+        // Gemini Models (Flash & Pro)
+        categoryBadge = 'Google AI';
+        subtitle = 'Gemini Flash & Gemini Pro';
+        cardClass = 'group-gemini';
+        accentColor = 'var(--col-gemini)';
+        iconSvg = '<svg class="group-icon icon-gemini" viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>';
+      }
 
-        const pctSpan = document.createElement('span');
-        pctSpan.className = 'agy-bucket-pct';
-        pctSpan.textContent = `${b.percentage}%`;
+      const card = document.createElement('div');
+      card.className = `agy-group-card ${cardClass}`;
 
-        header.appendChild(nameSpan);
-        header.appendChild(pctSpan);
+      // Card Header
+      const header = document.createElement('div');
+      header.className = 'agy-group-card-header';
+      header.innerHTML = `
+        <div class="agy-group-title-box">
+          ${iconSvg}
+          <div class="agy-group-titles">
+            <span class="agy-group-name">${escapeHtml(gName)}</span>
+            <span class="agy-group-desc">${escapeHtml(subtitle)}</span>
+          </div>
+        </div>
+        <span class="agy-group-pill">${escapeHtml(categoryBadge)}</span>
+      `;
+      card.appendChild(header);
 
-        const bar = document.createElement('div');
-        bar.className = 'agy-bucket-bar';
+      // Buckets List
+      const itemsList = document.createElement('div');
+      itemsList.className = 'agy-group-items';
 
-        const fill = document.createElement('div');
-        fill.className = 'agy-bucket-fill';
-        fill.style.width = `${b.percentage}%`;
-        bar.appendChild(fill);
+      (g.buckets || []).forEach(b => {
+        const pct = Math.max(0, Math.min(100, Math.round(b.percentage ?? 0)));
+        
+        let pctColor = accentColor;
+        if (pct <= 15) pctColor = 'var(--md-sys-color-error)';
+        else if (pct <= 40) pctColor = 'var(--md-sys-color-warning)';
 
-        const resetSpan = document.createElement('span');
-        resetSpan.className = 'agy-bucket-reset';
-        resetSpan.textContent = b.resetIn ? `Reset: ${b.resetIn}` : '';
+        let cleanName = b.displayName || '';
+        cleanName = cleanName
+          .replace('Five Hour Limit Remaining', 'Límite de 5 Horas')
+          .replace('Weekly Limit Remaining', 'Límite Semanal')
+          .replace('Gemini 4 Argon Weekly Limit', 'Cuota Semanal Argon')
+          .replace(' Limit Remaining', '')
+          .replace(' Remaining', '');
 
-        card.appendChild(header);
-        card.appendChild(bar);
-        card.appendChild(resetSpan);
+        let resetHtml = '';
+        if (b.resetIn) {
+          resetHtml = `
+            <div class="agy-bucket-footer">
+              <span class="agy-reset-time">
+                <svg class="clock-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                Reinicio en ${escapeHtml(b.resetIn)}
+              </span>
+            </div>
+          `;
+        }
 
-        agyBucketsContainer.appendChild(card);
+        const row = document.createElement('div');
+        row.className = 'agy-bucket-row';
+        row.innerHTML = `
+          <div class="agy-bucket-info">
+            <span class="agy-bucket-name">${escapeHtml(cleanName)}</span>
+            <span class="agy-bucket-pct" style="color: ${pctColor}">${pct}%</span>
+          </div>
+          <div class="m3-linear-track">
+            <div class="m3-linear-fill" style="width: ${pct}%; background-color: ${pctColor};"></div>
+          </div>
+          ${resetHtml}
+        `;
+        itemsList.appendChild(row);
       });
+
+      card.appendChild(itemsList);
+      agyGroupsContainer.appendChild(card);
     });
   }
 

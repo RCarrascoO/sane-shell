@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>sane-deck • M3 Companion</title>
-  <link rel="manifest" href="/manifest.json?v=5">
-  <link rel="stylesheet" href="/style.css?v=5">
+  <link rel="manifest" href="/manifest.json?v=6">
+  <link rel="stylesheet" href="/style.css?v=6">
 </head>
 <body>
   <div class="deck-container">
@@ -120,21 +120,9 @@
           <span class="agy-task-text" id="agy-task-title">En espera</span>
         </div>
 
-        <!-- Main Quota Linear Progress -->
-        <div class="agy-quota-main">
-          <div class="slider-info">
-            <span class="slider-label" id="agy-main-label">Límite 5h</span>
-            <span class="slider-value agy-color" id="agy-main-val">--%</span>
-          </div>
-          <div class="m3-linear-track">
-            <div class="m3-linear-fill" id="agy-main-fill" style="width: 0%;"></div>
-          </div>
-          <span class="agy-reset-sub" id="agy-main-reset">Reinicio en --</span>
-        </div>
-
-        <!-- Sub Buckets Grid -->
-        <div class="agy-buckets-grid" id="agy-buckets-container">
-          <!-- Dynamically populated (Weekly, Zen, Claude) -->
+        <!-- Model Groups Container: Gemini, Claude & GPT, Argon, Zen Browser -->
+        <div class="agy-groups-container" id="agy-groups-container">
+          <!-- Dynamically populated per model category -->
         </div>
 
         <!-- Actions -->
@@ -282,6 +270,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=5"></script>
+  <script src="/app.js?v=6"></script>
 </body>
 </html>
