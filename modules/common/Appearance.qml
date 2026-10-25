@@ -4,6 +4,7 @@ import Quickshell
 
 Singleton {
     id: root
+
     readonly property bool inirEverywhere: false
     readonly property bool zzzEverywhere: false
     readonly property bool animationsEnabled: true
@@ -13,14 +14,20 @@ Singleton {
         readonly property int elevationMargin: 8
         readonly property int verticalBarWidth: 30
     }
+
     readonly property QtObject rounding: QtObject {
-        readonly property int full: 999
-        readonly property int normal: 16
-        readonly property int small: 10
+        readonly property int full: Theme.shape.full
+        readonly property int extraLarge: Theme.shape.extraLarge
+        readonly property int large: Theme.shape.large
+        readonly property int medium: Theme.shape.medium
+        readonly property int small: Theme.shape.small
+        readonly property int extraSmall: Theme.shape.extraSmall
+        readonly property int normal: Theme.shape.large
     }
+
     readonly property QtObject font: QtObject {
         readonly property QtObject family: QtObject {
-            readonly property string main: "Inter"
+            readonly property string main: "Roboto Flex"
             readonly property string numbers: "JetBrainsMono Nerd Font"
         }
         readonly property QtObject pixelSize: QtObject {
@@ -29,12 +36,14 @@ Singleton {
             readonly property int smallie: 11
         }
     }
+
     readonly property QtObject inir: QtObject {
         readonly property color colText: Theme.onSurface
     }
+
     readonly property QtObject colors: QtObject {
         readonly property color colLayer0Border: Theme.outline
-        readonly property color colLayer0Hover: Theme.surfaceContainerHigh
+        readonly property color colLayer0Hover: Theme.surfaceContainerHighest
         readonly property color colLayer1: Theme.surfaceContainer
         readonly property color colLayer1Hover: Theme.surfaceContainerHigh
         readonly property color colOnLayer1: Theme.onSurface
@@ -48,5 +57,7 @@ Singleton {
         readonly property color colSuccess: Theme.success
         readonly property color colSurface: Theme.surface
         readonly property color colSurfaceContainer: Theme.surfaceContainer
+        readonly property color colSurfaceContainerLow: Theme.surfaceContainerLow
+        readonly property color colSurfaceContainerHigh: Theme.surfaceContainerHigh
     }
 }

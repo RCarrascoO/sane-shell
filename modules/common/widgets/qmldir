@@ -7,3 +7,6 @@ RippleButton 1.0 RippleButton.qml
 MaterialSymbol 1.0 MaterialSymbol.qml
 StyledToolTip 1.0 StyledToolTip.qml
 ClippedOutlineCircularProgress 1.0 ClippedOutlineCircularProgress.qml
+M3Slider 1.0 M3Slider.qml
+M3Switch 1.0 M3Switch.qml
+M3LinearProgress 1.0 M3LinearProgress.qml

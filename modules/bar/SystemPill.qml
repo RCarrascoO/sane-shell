@@ -9,11 +9,18 @@ Rectangle {
     id: root
 
     property var screenTarget: null
+    property bool hasLeftSibling: false
     readonly property bool isPopupOpen: Theme.activePopup === "quicksettings"
 
-    implicitHeight: 24
+    implicitHeight: 26
     implicitWidth: sysRow.implicitWidth + 20
-    radius: 12
+
+    // M3 Connected Segment con TrayPill
+    topLeftRadius: root.hasLeftSibling ? 4 : 13
+    bottomLeftRadius: root.hasLeftSibling ? 4 : 13
+    topRightRadius: 13
+    bottomRightRadius: 13
+
     color: isPopupOpen
         ? Theme.primary
         : (sysMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)

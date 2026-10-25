@@ -113,7 +113,10 @@ StyledPopup {
                     }
                     StyledText {
                         text: root.formatDate(root.currentTime)
-                        font.pixelSize: 12
+                        font {
+                            family: Appearance.font.family.main
+                            pixelSize: 12
+                        }
                         color: Theme.onSurfaceVariant
                     }
                 }
@@ -125,7 +128,7 @@ StyledPopup {
                     implicitWidth: 36
                     implicitHeight: 36
                     buttonRadius: 18
-                    colBackground: Theme.surfaceContainer
+                    colBackground: Theme.surfaceContainerHigh
                     colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
                         Theme.activePopup = "";
@@ -144,7 +147,7 @@ StyledPopup {
                     implicitWidth: 36
                     implicitHeight: 36
                     buttonRadius: 18
-                    colBackground: Theme.surfaceContainer
+                    colBackground: Theme.surfaceContainerHigh
                     colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
                         Theme.activePopup = "";
@@ -163,7 +166,7 @@ StyledPopup {
                     implicitWidth: 36
                     implicitHeight: 36
                     buttonRadius: 18
-                    colBackground: Theme.surfaceContainer
+                    colBackground: Theme.surfaceContainerHigh
                     colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
                         Theme.activePopup = "";
@@ -178,76 +181,34 @@ StyledPopup {
                 }
             }
 
-            // 2. THICK ANDROID 16 PILL VOLUME SLIDER (44px)
+            // 2. M3 TONAL CARD CON M3SLIDER (Split-Track Slider Oficial M3 Expressive)
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: 44
-                radius: 22
-                color: Theme.surfaceContainerHigh
-                clip: true
+                implicitHeight: m3VolSlider.implicitHeight + 16
+                radius: 24
+                color: Theme.surfaceContainerLow
+                border.width: 1
+                border.color: Theme.outlineVariant
 
-                // Filled Bar
-                Rectangle {
-                    id: volFill
-                    height: parent.height
-                    width: Math.max(44, parent.width * (SystemStats.volume / 100.0))
-                    radius: 22
-                    color: SystemStats.isMuted ? Theme.surfaceContainerHighest : Theme.primary
-
-                    Behavior on width {
-                        NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
-                    }
-                }
-
-                // Inside items: Icon & Volume Percentage
-                RowLayout {
+                M3Slider {
+                    id: m3VolSlider
                     anchors {
-                        fill: parent
-                        leftMargin: 12
-                        rightMargin: 16
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                        margins: 8
                     }
-
-                    MaterialSymbol {
-                        text: SystemStats.isMuted ? "volume_off" : (SystemStats.volume > 50 ? "volume_up" : "volume_down")
-                        iconSize: 20
-                        color: SystemStats.isMuted ? Theme.error : Theme.onPrimary
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    StyledText {
-                        text: `${SystemStats.volume}%`
-                        font {
-                            family: Appearance.font.family.numbers
-                            pixelSize: 12
-                            weight: Font.Bold
-                        }
-                        color: (SystemStats.volume > 20 && !SystemStats.isMuted) ? Theme.onPrimary : Theme.onSurface
-                    }
-                }
-
-                // Drag / Click area
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    function updateVol(mouse) {
-                        const ratio = Math.max(0, Math.min(1, mouse.x / width));
-                        SystemStats.setVolume(Math.round(ratio * 100));
-                    }
-                    onClicked: mouse => {
-                        if (mouse.x <= 44) {
-                            SystemStats.toggleMute();
-                        } else {
-                            updateVol(mouse);
-                        }
-                    }
-                    onPositionChanged: mouse => {
-                        if (pressed) updateVol(mouse);
-                    }
+                    value: SystemStats.volume
+                    from: 0
+                    to: 100
+                    isMuted: SystemStats.isMuted
+                    icon: SystemStats.isMuted ? "volume_off" : (SystemStats.volume > 50 ? "volume_up" : "volume_down")
+                    onMoved: val => SystemStats.setVolume(val)
+                    onIconClicked: SystemStats.toggleMute()
                 }
             }
 
-            // 3. 2x3 GRID OF ANDROID 16 PILL QUICK SETTINGS TILES (height: 58, radius: 29)
+            // 3. 2x3 GRID OF M3 PILL QUICK SETTINGS TILES (height: 58, radius: 29)
             GridLayout {
                 Layout.fillWidth: true
                 columns: 2
@@ -270,9 +231,9 @@ StyledPopup {
                         anchors {
                             fill: parent
                             leftMargin: 16
-                            rightMargin: 16
+                            rightMargin: 14
                         }
-                        spacing: 12
+                        spacing: 10
 
                         MaterialSymbol {
                             text: "lan"
@@ -288,6 +249,7 @@ StyledPopup {
                                 Layout.fillWidth: true
                                 text: "Ethernet"
                                 font {
+                                    family: Appearance.font.family.main
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
@@ -297,10 +259,19 @@ StyledPopup {
                             StyledText {
                                 Layout.fillWidth: true
                                 text: "Conectado"
-                                font.pixelSize: 10
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
                                 color: Qt.rgba(Theme.onPrimary.r, Theme.onPrimary.g, Theme.onPrimary.b, 0.8)
                                 elide: Text.ElideRight
                             }
+                        }
+
+                        MaterialSymbol {
+                            text: "chevron_right"
+                            iconSize: 16
+                            color: Theme.onPrimary
                         }
                     }
                 }
@@ -318,9 +289,9 @@ StyledPopup {
                         anchors {
                             fill: parent
                             leftMargin: 16
-                            rightMargin: 16
+                            rightMargin: 14
                         }
-                        spacing: 12
+                        spacing: 10
 
                         MaterialSymbol {
                             text: SystemStats.isMuted ? "volume_off" : "volume_up"
@@ -336,6 +307,7 @@ StyledPopup {
                                 Layout.fillWidth: true
                                 text: "Sonido"
                                 font {
+                                    family: Appearance.font.family.main
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
@@ -345,17 +317,27 @@ StyledPopup {
                             StyledText {
                                 Layout.fillWidth: true
                                 text: SystemStats.isMuted ? "Silenciado" : `${SystemStats.volume}% • PipeWire`
-                                font.pixelSize: 10
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
                                 color: SystemStats.isMuted
                                     ? Theme.onSurfaceVariant
                                     : Qt.rgba(Theme.onPrimary.r, Theme.onPrimary.g, Theme.onPrimary.b, 0.8)
                                 elide: Text.ElideRight
                             }
                         }
+
+                        // Subaction indicator
+                        MaterialSymbol {
+                            text: "tune"
+                            iconSize: 16
+                            color: SystemStats.isMuted ? Theme.onSurfaceVariant : Theme.onPrimary
+                        }
                     }
                 }
 
-                // Tile 3: Tema Oscuro
+                // Tile 3: Tema Oscuro con M3Switch
                 RippleButton {
                     Layout.fillWidth: true
                     implicitHeight: 58
@@ -367,14 +349,14 @@ StyledPopup {
                     contentItem: RowLayout {
                         anchors {
                             fill: parent
-                            leftMargin: 16
-                            rightMargin: 16
+                            leftMargin: 12
+                            rightMargin: 8
                         }
-                        spacing: 12
+                        spacing: 6
 
                         MaterialSymbol {
                             text: Theme.isDark ? "dark_mode" : "light_mode"
-                            iconSize: 22
+                            iconSize: 20
                             color: Theme.isDark ? Theme.onPrimary : Theme.primary
                         }
 
@@ -386,7 +368,8 @@ StyledPopup {
                                 Layout.fillWidth: true
                                 text: "Tema Oscuro"
                                 font {
-                                    pixelSize: 12
+                                    family: Appearance.font.family.main
+                                    pixelSize: 11
                                     weight: Font.Bold
                                 }
                                 color: Theme.isDark ? Theme.onPrimary : Theme.onSurface
@@ -394,12 +377,28 @@ StyledPopup {
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: Theme.isDark ? "Catppuccin Mocha" : "Catppuccin Latte"
-                                font.pixelSize: 10
+                                text: Theme.isDark ? "Mocha" : "Latte"
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
                                 color: Theme.isDark
                                     ? Qt.rgba(Theme.onPrimary.r, Theme.onPrimary.g, Theme.onPrimary.b, 0.8)
                                     : Theme.onSurfaceVariant
                                 elide: Text.ElideRight
+                            }
+                        }
+
+                        // Compact M3 Switch
+                        Item {
+                            implicitWidth: 36
+                            implicitHeight: 22
+
+                            M3Switch {
+                                anchors.centerIn: parent
+                                scale: 0.7
+                                checked: Theme.isDark
+                                onToggled: Theme.toggleTheme()
                             }
                         }
                     }
@@ -421,9 +420,9 @@ StyledPopup {
                         anchors {
                             fill: parent
                             leftMargin: 16
-                            rightMargin: 16
+                            rightMargin: 14
                         }
-                        spacing: 12
+                        spacing: 10
 
                         MaterialSymbol {
                             text: "photo_camera"
@@ -439,6 +438,7 @@ StyledPopup {
                                 Layout.fillWidth: true
                                 text: "Captura"
                                 font {
+                                    family: Appearance.font.family.main
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
@@ -448,7 +448,10 @@ StyledPopup {
                             StyledText {
                                 Layout.fillWidth: true
                                 text: "Región de pantalla"
-                                font.pixelSize: 10
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
                                 color: Theme.onSurfaceVariant
                                 elide: Text.ElideRight
                             }
@@ -472,9 +475,9 @@ StyledPopup {
                         anchors {
                             fill: parent
                             leftMargin: 16
-                            rightMargin: 16
+                            rightMargin: 14
                         }
-                        spacing: 12
+                        spacing: 10
 
                         MaterialSymbol {
                             text: "speed"
@@ -490,6 +493,7 @@ StyledPopup {
                                 Layout.fillWidth: true
                                 text: `GPU ${SystemStats.gpuTemp}°C`
                                 font {
+                                    family: Appearance.font.family.main
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
@@ -499,7 +503,10 @@ StyledPopup {
                             StyledText {
                                 Layout.fillWidth: true
                                 text: `CPU ${SystemStats.cpuUsage}% • ${SystemStats.ramUsedGb}G`
-                                font.pixelSize: 10
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
                                 color: Theme.onSurfaceVariant
                                 elide: Text.ElideRight
                             }
@@ -523,9 +530,9 @@ StyledPopup {
                         anchors {
                             fill: parent
                             leftMargin: 16
-                            rightMargin: 16
+                            rightMargin: 14
                         }
-                        spacing: 12
+                        spacing: 10
 
                         MaterialSymbol {
                             text: "content_paste"
@@ -541,6 +548,7 @@ StyledPopup {
                                 Layout.fillWidth: true
                                 text: "Portapapeles"
                                 font {
+                                    family: Appearance.font.family.main
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
@@ -550,7 +558,10 @@ StyledPopup {
                             StyledText {
                                 Layout.fillWidth: true
                                 text: "Historial Cliphist"
-                                font.pixelSize: 10
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
                                 color: Theme.onSurfaceVariant
                                 elide: Text.ElideRight
                             }
@@ -559,27 +570,27 @@ StyledPopup {
                 }
             }
 
-            // 4. MEDIA PLAYER CARD (MPRIS via playerctl)
+            // 4. MEDIA PLAYER CARD (MPRIS via playerctl en Theme.secondaryContainer)
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: 64
+                implicitHeight: 72
                 radius: 20
-                color: Theme.surfaceContainer
+                color: Theme.secondaryContainer
                 border.width: 1
-                border.color: Theme.outline
+                border.color: Theme.outlineVariant
 
                 RowLayout {
                     anchors {
                         fill: parent
-                        leftMargin: 12
-                        rightMargin: 12
+                        leftMargin: 14
+                        rightMargin: 14
                     }
                     spacing: 10
 
                     // Thumbnail / Music Icon
                     Rectangle {
-                        implicitWidth: 42
-                        implicitHeight: 42
+                        implicitWidth: 44
+                        implicitHeight: 44
                         radius: 12
                         color: Theme.surfaceContainerHigh
                         clip: true
@@ -610,32 +621,36 @@ StyledPopup {
                             Layout.fillWidth: true
                             text: root.mediaTitle.length > 0 ? root.mediaTitle : "Sin reproducción multimedia"
                             font {
+                                family: Appearance.font.family.main
                                 pixelSize: 12
                                 weight: Font.Bold
                             }
-                            color: Theme.onSurface
+                            color: Theme.onSecondaryContainer
                             elide: Text.ElideRight
                         }
 
                         StyledText {
                             Layout.fillWidth: true
                             text: root.mediaArtist.length > 0 ? root.mediaArtist : "PipeWire MPRIS"
-                            font.pixelSize: 10
-                            color: Theme.onSurfaceVariant
+                            font {
+                                family: Appearance.font.family.main
+                                pixelSize: 10
+                            }
+                            color: Qt.rgba(Theme.onSecondaryContainer.r, Theme.onSecondaryContainer.g, Theme.onSecondaryContainer.b, 0.75)
                             elide: Text.ElideRight
                         }
                     }
 
-                    // Media Controls (Prev, Play/Pause, Next)
+                    // Media Controls (Prev, Squircle Play/Pause, Next)
                     RowLayout {
-                        spacing: 4
+                        spacing: 6
 
                         RippleButton {
                             implicitWidth: 32
                             implicitHeight: 32
                             buttonRadius: 16
                             colBackground: "transparent"
-                            colBackgroundHover: Theme.surfaceContainerHigh
+                            colBackgroundHover: Theme.surfaceContainerHighest
                             onClicked: {
                                 Quickshell.execDetached(["playerctl", "previous"]);
                                 mediaProcess.running = true;
@@ -644,14 +659,15 @@ StyledPopup {
                                 anchors.centerIn: parent
                                 text: "skip_previous"
                                 iconSize: 18
-                                color: Theme.onSurface
+                                color: Theme.onSecondaryContainer
                             }
                         }
 
+                        // M3 Expressive Squircle Play/Pause Button (42x42, radius 14)
                         RippleButton {
-                            implicitWidth: 36
-                            implicitHeight: 36
-                            buttonRadius: 18
+                            implicitWidth: 42
+                            implicitHeight: 42
+                            buttonRadius: 14
                             colBackground: Theme.primary
                             colBackgroundHover: Theme.primary
                             onClicked: {
@@ -661,7 +677,7 @@ StyledPopup {
                             contentItem: MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: root.mediaStatus === "Playing" ? "pause" : "play_arrow"
-                                iconSize: 20
+                                iconSize: 22
                                 color: Theme.onPrimary
                             }
                         }
@@ -671,7 +687,7 @@ StyledPopup {
                             implicitHeight: 32
                             buttonRadius: 16
                             colBackground: "transparent"
-                            colBackgroundHover: Theme.surfaceContainerHigh
+                            colBackgroundHover: Theme.surfaceContainerHighest
                             onClicked: {
                                 Quickshell.execDetached(["playerctl", "next"]);
                                 mediaProcess.running = true;
@@ -680,24 +696,26 @@ StyledPopup {
                                 anchors.centerIn: parent
                                 text: "skip_next"
                                 iconSize: 18
-                                color: Theme.onSurface
+                                color: Theme.onSecondaryContainer
                             }
                         }
                     }
                 }
             }
 
-            // 5. ANDROID 16 BOTTOM FOOTER BAR
+            // 5. ANDROID 16 / M3 BOTTOM FOOTER BAR
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
 
                 // User pill
                 Rectangle {
-                    implicitHeight: 32
-                    implicitWidth: userRow.implicitWidth + 16
-                    radius: 16
-                    color: Theme.surfaceContainer
+                    implicitHeight: 34
+                    implicitWidth: userRow.implicitWidth + 18
+                    radius: 17
+                    color: Theme.surfaceContainerLow
+                    border.width: 1
+                    border.color: Theme.outlineVariant
 
                     RowLayout {
                         id: userRow
@@ -706,13 +724,14 @@ StyledPopup {
 
                         MaterialSymbol {
                             text: "account_circle"
-                            iconSize: 16
+                            iconSize: 18
                             color: Theme.primary
                         }
 
                         StyledText {
                             text: "sane • CachyOS"
                             font {
+                                family: Appearance.font.family.main
                                 pixelSize: 11
                                 weight: Font.Medium
                             }
@@ -725,11 +744,11 @@ StyledPopup {
 
                 // Lock button
                 RippleButton {
-                    implicitWidth: 32
-                    implicitHeight: 32
-                    buttonRadius: 16
-                    colBackground: Theme.surfaceContainer
-                    colBackgroundHover: Theme.surfaceContainerHigh
+                    implicitWidth: 34
+                    implicitHeight: 34
+                    buttonRadius: 17
+                    colBackground: Theme.surfaceContainerLow
+                    colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
                         Theme.activePopup = "";
                         Quickshell.execDetached(["swaylock"]);
@@ -744,11 +763,11 @@ StyledPopup {
 
                 // Restart Niri/Shell
                 RippleButton {
-                    implicitWidth: 32
-                    implicitHeight: 32
-                    buttonRadius: 16
-                    colBackground: Theme.surfaceContainer
-                    colBackgroundHover: Theme.surfaceContainerHigh
+                    implicitWidth: 34
+                    implicitHeight: 34
+                    buttonRadius: 17
+                    colBackground: Theme.surfaceContainerLow
+                    colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
                         Theme.activePopup = "";
                         Quickshell.execDetached(["niri", "msg", "action", "load-config-file"]);
@@ -763,10 +782,10 @@ StyledPopup {
 
                 // Power Off
                 RippleButton {
-                    implicitWidth: 32
-                    implicitHeight: 32
-                    buttonRadius: 16
-                    colBackground: Theme.surfaceContainer
+                    implicitWidth: 34
+                    implicitHeight: 34
+                    buttonRadius: 17
+                    colBackground: Theme.surfaceContainerLow
                     colBackgroundHover: Theme.error
                     onClicked: {
                         Theme.activePopup = "";

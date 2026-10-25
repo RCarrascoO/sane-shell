@@ -8,6 +8,7 @@ import Quickshell
 
 StyledPopup {
     id: popup
+
     popupId: "agy"
     hoverActivates: false
 
@@ -46,13 +47,13 @@ StyledPopup {
     }
 
     // ==========================================
-    // REUSABLE COMPONENT: QuotaBucketItem
+    // REUSABLE COMPONENT: QuotaBucketItem (con M3LinearProgress)
     // ==========================================
     component QuotaBucketItem: ColumnLayout {
         id: bucketItem
         required property var bucketData
         Layout.fillWidth: true
-        spacing: 3
+        spacing: 4
 
         // Metric label + percentage
         RowLayout {
@@ -61,8 +62,11 @@ StyledPopup {
             StyledText {
                 Layout.fillWidth: true
                 text: bucketItem.bucketData.displayName
-                font.pixelSize: Appearance.font.pixelSize.smallie
-                color: Appearance.colors.colOnLayer1
+                font {
+                    family: Appearance.font.family.main
+                    pixelSize: Appearance.font.pixelSize.smallie
+                }
+                color: Theme.onSurface
                 elide: Text.ElideRight
             }
 
@@ -74,30 +78,20 @@ StyledPopup {
                     weight: Font.Bold
                 }
                 color: bucketItem.bucketData.percentage <= 15
-                    ? Appearance.colors.colError
-                    : (bucketItem.bucketData.percentage <= 40 ? Appearance.colors.colWarning : Appearance.colors.colOnLayer1)
+                    ? Theme.error
+                    : (bucketItem.bucketData.percentage <= 40 ? Theme.warning : Theme.secondary)
             }
         }
 
-        // Modern horizontal progress track
-        Rectangle {
+        // M3 Official Linear Progress con Gap + Stop Dot
+        M3LinearProgress {
             Layout.fillWidth: true
-            height: 4
-            radius: 2
-            color: Qt.rgba(1, 1, 1, 0.08)
-
-            Rectangle {
-                width: parent.width * Math.max(0, Math.min(1, bucketItem.bucketData.fraction))
-                height: parent.height
-                radius: 2
-                color: bucketItem.bucketData.percentage <= 15
-                    ? Appearance.colors.colError
-                    : (bucketItem.bucketData.percentage <= 40 ? Appearance.colors.colWarning : "#52B768")
-
-                Behavior on width {
-                    NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                }
-            }
+            implicitHeight: 6
+            value: Math.max(0, Math.min(1, bucketItem.bucketData.fraction))
+            colPrimary: bucketItem.bucketData.percentage <= 15
+                ? Theme.error
+                : (bucketItem.bucketData.percentage <= 40 ? Theme.warning : Theme.secondary)
+            colSecondary: Theme.secondaryContainer
         }
 
         // Countdown reset text
@@ -107,14 +101,17 @@ StyledPopup {
             MaterialSymbol {
                 text: "schedule"
                 iconSize: 11
-                color: Appearance.colors.colSubtext
+                color: Theme.onSurfaceVariant
             }
             StyledText {
                 text: (bucketItem.bucketData.displayName.includes("Uso actual") || bucketItem.bucketData.displayName.includes("semanal"))
                     ? Translation.tr("Se restablece en %1").arg(bucketItem.bucketData.resetIn)
                     : Translation.tr("Resets in %1").arg(bucketItem.bucketData.resetIn)
-                font.pixelSize: Appearance.font.pixelSize.smallie - 1
-                color: Appearance.colors.colSubtext
+                font {
+                    family: Appearance.font.family.main
+                    pixelSize: Appearance.font.pixelSize.smallie - 1
+                }
+                color: Theme.onSurfaceVariant
             }
         }
 
@@ -127,10 +124,10 @@ StyledPopup {
     component IdeCard: Rectangle {
         id: ideCard
         Layout.fillWidth: true
-        radius: Appearance.rounding.normal
-        color: Appearance.colors.colLayer1
+        radius: 20
+        color: Theme.surfaceContainerLow
         border.width: 1
-        border.color: Appearance.colors.colLayer0Border
+        border.color: Theme.outlineVariant
         implicitHeight: ideContentCol.implicitHeight + 20
 
         ColumnLayout {
@@ -139,43 +136,49 @@ StyledPopup {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                margins: 10
+                margins: 12
             }
-            spacing: 8
+            spacing: 10
 
             // Card header
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
 
                 MaterialSymbol {
                     text: "terminal"
-                    iconSize: 14
-                    color: Appearance.colors.colPrimary
+                    iconSize: 16
+                    color: Theme.primary
                 }
 
                 StyledText {
                     text: "Antigravity IDE"
                     font {
+                        family: Appearance.font.family.main
                         pixelSize: Appearance.font.pixelSize.small
                         weight: Font.Bold
                     }
-                    color: Appearance.colors.colOnLayer1
+                    color: Theme.onSurface
                 }
 
                 Item { Layout.fillWidth: true }
 
+                // M3 Chip
                 Rectangle {
-                    height: 16
-                    width: localTag.implicitWidth + 8
-                    radius: 3
-                    color: Qt.rgba(1, 1, 1, 0.06)
+                    height: 20
+                    width: localTag.implicitWidth + 10
+                    radius: 6
+                    color: Theme.primaryContainer
                     StyledText {
                         id: localTag
                         anchors.centerIn: parent
                         text: "Local"
-                        font.pixelSize: 9
-                        color: Appearance.colors.colSubtext
+                        font {
+                            family: Appearance.font.family.main
+                            pixelSize: 10
+                            weight: Font.DemiBold
+                        }
+                        color: Theme.onPrimaryContainer
                     }
                 }
             }
@@ -184,8 +187,7 @@ StyledPopup {
             Rectangle {
                 Layout.fillWidth: true
                 height: 1
-                color: Appearance.colors.colLayer0Border
-                opacity: 0.3
+                color: Theme.outlineVariant
             }
 
             // Repeater over dynamic IDE groups
@@ -196,16 +198,17 @@ StyledPopup {
                     required property var modelData
                     required property int index
                     Layout.fillWidth: true
-                    spacing: 5
+                    spacing: 6
 
                     // Group display name
                     StyledText {
                         text: ideGroupCol.modelData.displayName
                         font {
+                            family: Appearance.font.family.main
                             pixelSize: Appearance.font.pixelSize.smallie
                             weight: Font.DemiBold
                         }
-                        color: Appearance.colors.colSubtext
+                        color: Theme.onSurfaceVariant
                     }
 
                     // Buckets
@@ -222,8 +225,8 @@ StyledPopup {
                         visible: ideGroupCol.index < (popup.ideGroups.length - 1)
                         Layout.fillWidth: true
                         height: 1
-                        color: Appearance.colors.colLayer0Border
-                        opacity: 0.2
+                        color: Theme.outlineVariant
+                        opacity: 0.5
                     }
                 }
             }
@@ -237,10 +240,10 @@ StyledPopup {
         id: webCard
         visible: popup.webGroup !== null
         Layout.fillWidth: true
-        radius: Appearance.rounding.normal
-        color: Appearance.colors.colLayer1
+        radius: 20
+        color: Theme.surfaceContainerLow
         border.width: 1
-        border.color: Appearance.colors.colLayer0Border
+        border.color: Theme.outlineVariant
         implicitHeight: webContentCol.implicitHeight + 20
 
         ColumnLayout {
@@ -249,65 +252,68 @@ StyledPopup {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                margins: 10
+                margins: 12
             }
-            spacing: 8
+            spacing: 10
 
             // Card header
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
 
                 MaterialSymbol {
                     text: "travel_explore"
-                    iconSize: 15
-                    color: Appearance.colors.colPrimary
+                    iconSize: 16
+                    color: Theme.secondary
                 }
 
                 StyledText {
                     text: "Zen Browser"
                     font {
+                        family: Appearance.font.family.main
                         pixelSize: Appearance.font.pixelSize.small
                         weight: Font.Bold
                     }
-                    color: Appearance.colors.colOnLayer1
+                    color: Theme.onSurface
                 }
 
                 Item { Layout.fillWidth: true }
 
-                // PRO plan badge
+                // PRO plan badge M3 Tertiary Container
                 Rectangle {
-                    height: 17
-                    width: proLabel.implicitWidth + 8
-                    radius: 3
-                    color: Qt.rgba(0.5, 0.3, 0.9, 0.25)
-                    border.width: 1
-                    border.color: Qt.rgba(0.6, 0.4, 1.0, 0.4)
+                    height: 20
+                    width: proLabel.implicitWidth + 10
+                    radius: 6
+                    color: Theme.tertiaryContainer
                     StyledText {
                         id: proLabel
                         anchors.centerIn: parent
                         text: "PRO"
-                        font.pixelSize: 9
-                        font.weight: Font.Bold
-                        color: "#C084FC"
+                        font {
+                            family: Appearance.font.family.main
+                            pixelSize: 10
+                            weight: Font.Bold
+                        }
+                        color: Theme.onTertiaryContainer
                     }
                 }
 
-                // Model badge
+                // Model badge M3 Primary Container
                 Rectangle {
-                    height: 17
-                    width: modelLabel.implicitWidth + 8
-                    radius: 3
-                    color: Qt.rgba(1, 1, 1, 0.08)
-                    border.width: 1
-                    border.color: Appearance.colors.colLayer0Border
+                    height: 20
+                    width: modelLabel.implicitWidth + 10
+                    radius: 6
+                    color: Theme.primaryContainer
                     StyledText {
                         id: modelLabel
                         anchors.centerIn: parent
                         text: popup.webModelName
-                        font.pixelSize: 9
-                        font.weight: Font.Medium
-                        color: Appearance.colors.colOnLayer1
+                        font {
+                            family: Appearance.font.family.main
+                            pixelSize: 10
+                            weight: Font.DemiBold
+                        }
+                        color: Theme.onPrimaryContainer
                     }
                 }
             }
@@ -316,8 +322,7 @@ StyledPopup {
             Rectangle {
                 Layout.fillWidth: true
                 height: 1
-                color: Appearance.colors.colLayer0Border
-                opacity: 0.3
+                color: Theme.outlineVariant
             }
 
             // Web Buckets
@@ -337,9 +342,11 @@ StyledPopup {
     component TaskFooter: Rectangle {
         visible: (popup.quotaData?.currentTask ?? "").length > 0
         Layout.fillWidth: true
-        radius: Appearance.rounding.small
-        color: Appearance.colors.colLayer1
-        implicitHeight: taskRow.implicitHeight + 8
+        radius: 12
+        color: Theme.surfaceContainerLow
+        border.width: 1
+        border.color: Theme.outlineVariant
+        implicitHeight: taskRow.implicitHeight + 10
 
         RowLayout {
             id: taskRow
@@ -352,21 +359,24 @@ StyledPopup {
             MaterialSymbol {
                 text: "chat"
                 iconSize: 14
-                color: Appearance.colors.colPrimary
+                color: Theme.primary
             }
 
             StyledText {
                 Layout.fillWidth: true
                 text: popup.quotaData?.currentTask ?? ""
-                font.pixelSize: Appearance.font.pixelSize.smallie
-                color: Appearance.colors.colSubtext
+                font {
+                    family: Appearance.font.family.main
+                    pixelSize: Appearance.font.pixelSize.smallie
+                }
+                color: Theme.onSurfaceVariant
                 elide: Text.ElideRight
             }
         }
     }
 
     // ==========================================
-    // REUSABLE COMPONENT: QuickActionButtons
+    // REUSABLE COMPONENT: QuickActionButtons (M3 Filled Tonal Buttons)
     // ==========================================
     component QuickActionButtons: RowLayout {
         Layout.fillWidth: true
@@ -374,50 +384,56 @@ StyledPopup {
 
         RippleButton {
             Layout.fillWidth: true
-            implicitHeight: 30
-            buttonRadius: Appearance.rounding.small
-            colBackground: Appearance.colors.colLayer1
-            colBackgroundHover: Appearance.colors.colLayer1Hover
+            implicitHeight: 40
+            buttonRadius: 20
+            colBackground: Theme.secondaryContainer
+            colBackgroundHover: Theme.surfaceContainerHighest
             onClicked: Quickshell.execDetached(["/home/sane/.local/bin/agy-tool", "focus"])
 
             contentItem: RowLayout {
                 anchors.centerIn: parent
-                spacing: 5
+                spacing: 6
                 MaterialSymbol {
                     text: "terminal"
-                    iconSize: 13
-                    color: Appearance.colors.colOnLayer1
+                    iconSize: 16
+                    color: Theme.onSecondaryContainer
                 }
                 StyledText {
                     text: Translation.tr("Antigravity")
-                    font.pixelSize: Appearance.font.pixelSize.smallie
-                    font.weight: Font.Medium
-                    color: Appearance.colors.colOnLayer1
+                    font {
+                        family: Appearance.font.family.main
+                        pixelSize: Appearance.font.pixelSize.smallie
+                        weight: Font.DemiBold
+                    }
+                    color: Theme.onSecondaryContainer
                 }
             }
         }
 
         RippleButton {
             Layout.fillWidth: true
-            implicitHeight: 30
-            buttonRadius: Appearance.rounding.small
-            colBackground: Appearance.colors.colLayer1
-            colBackgroundHover: Appearance.colors.colLayer1Hover
+            implicitHeight: 40
+            buttonRadius: 20
+            colBackground: Theme.secondaryContainer
+            colBackgroundHover: Theme.surfaceContainerHighest
             onClicked: Quickshell.execDetached(["/home/sane/.local/bin/agy-tool", "focus", "zen"])
 
             contentItem: RowLayout {
                 anchors.centerIn: parent
-                spacing: 5
+                spacing: 6
                 MaterialSymbol {
                     text: "travel_explore"
-                    iconSize: 13
-                    color: Appearance.colors.colPrimary
+                    iconSize: 16
+                    color: Theme.onSecondaryContainer
                 }
                 StyledText {
                     text: Translation.tr("Gemini Web")
-                    font.pixelSize: Appearance.font.pixelSize.smallie
-                    font.weight: Font.Medium
-                    color: Appearance.colors.colOnLayer1
+                    font {
+                        family: Appearance.font.family.main
+                        pixelSize: Appearance.font.pixelSize.smallie
+                        weight: Font.DemiBold
+                    }
+                    color: Theme.onSecondaryContainer
                 }
             }
         }
@@ -433,9 +449,9 @@ StyledPopup {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                margins: 12
+                margins: 14
             }
-            spacing: 10
+            spacing: 12
 
             // ==========================================
             // HEADER
@@ -449,47 +465,64 @@ StyledPopup {
                     width: 20
                     height: 20
                     colorize: true
-                    color: Appearance.colors.colPrimary
+                    color: Theme.primary
                 }
 
                 StyledText {
                     text: Translation.tr("Cuotas de Modelos")
                     font {
+                        family: Appearance.font.family.main
                         pixelSize: Appearance.font.pixelSize.larger
-                        weight: Font.DemiBold
+                        weight: Font.Bold
                     }
-                    color: Appearance.colors.colOnLayer1
+                    color: Theme.onSurface
                 }
 
                 Item { Layout.fillWidth: true }
 
-                // Live status chip
-                RowLayout {
-                    spacing: 5
-                    Rectangle {
-                        width: 7; height: 7; radius: 3.5
-                        color: (popup.quotaData?.busy ?? false) ? Appearance.colors.colPrimary : "#52B768"
-                        SequentialAnimation on opacity {
-                            loops: Animation.Infinite
-                            running: popup.quotaData?.busy ?? false
-                            NumberAnimation { from: 0.3; to: 1.0; duration: 600; easing.type: Easing.InOutQuad }
-                            NumberAnimation { from: 1.0; to: 0.3; duration: 600; easing.type: Easing.InOutQuad }
+                // Live status chip M3
+                Rectangle {
+                    height: 22
+                    width: liveStatusRow.implicitWidth + 12
+                    radius: 11
+                    color: Theme.surfaceContainerLow
+                    border.width: 1
+                    border.color: Theme.outlineVariant
+
+                    RowLayout {
+                        id: liveStatusRow
+                        anchors.centerIn: parent
+                        spacing: 5
+
+                        Rectangle {
+                            width: 6; height: 6; radius: 3
+                            color: (popup.quotaData?.busy ?? false) ? Theme.primary : Theme.success
+                            SequentialAnimation on opacity {
+                                loops: Animation.Infinite
+                                running: popup.quotaData?.busy ?? false
+                                NumberAnimation { from: 0.3; to: 1.0; duration: 600; easing.type: Easing.InOutQuad }
+                                NumberAnimation { from: 1.0; to: 0.3; duration: 600; easing.type: Easing.InOutQuad }
+                            }
                         }
-                    }
-                    StyledText {
-                        text: (popup.quotaData?.busy ?? false) ? Translation.tr("Generando") : Translation.tr("Sincronizado")
-                        font.pixelSize: Appearance.font.pixelSize.smallie
-                        color: (popup.quotaData?.busy ?? false) ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                        StyledText {
+                            text: (popup.quotaData?.busy ?? false) ? Translation.tr("Generando") : Translation.tr("Sincronizado")
+                            font {
+                                family: Appearance.font.family.main
+                                pixelSize: 10
+                                weight: Font.Medium
+                            }
+                            color: (popup.quotaData?.busy ?? false) ? Theme.primary : Theme.onSurfaceVariant
+                        }
                     }
                 }
 
                 // Refresh Button
                 RippleButton {
                     id: refreshBtn
-                    implicitWidth: 26; implicitHeight: 26
-                    buttonRadius: 13
-                    colBackground: "transparent"
-                    colBackgroundHover: Appearance.colors.colLayer1Hover
+                    implicitWidth: 30; implicitHeight: 30
+                    buttonRadius: 15
+                    colBackground: Theme.surfaceContainerLow
+                    colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
                         rotateAnim.restart();
                         popup.requestRefresh();
@@ -498,8 +531,8 @@ StyledPopup {
                         id: refreshIcon
                         anchors.centerIn: parent
                         text: "refresh"
-                        iconSize: 15
-                        color: Appearance.colors.colSubtext
+                        iconSize: 16
+                        color: Theme.onSurfaceVariant
                     }
                     RotationAnimation {
                         id: rotateAnim

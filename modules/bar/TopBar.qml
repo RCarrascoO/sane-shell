@@ -38,7 +38,7 @@ PanelWindow {
             bottom: parent.bottom
         }
         height: 1
-        color: Theme.surfaceContainerHigh
+        color: Theme.outlineVariant
     }
 
     // Bar contents
@@ -49,20 +49,23 @@ PanelWindow {
             rightMargin: 10
         }
 
-        // LEFT CLUSTER: Pixel App Launcher + Workspaces (+ Title on Primary)
+        // LEFT CLUSTER: M3 Segmented Group (Apps Button + Workspaces)
         RowLayout {
             anchors {
                 left: parent.left
                 verticalCenter: parent.verticalCenter
             }
-            spacing: 8
+            spacing: 2
 
-            // App Launcher Button (Pixel Apps Pill)
+            // App Launcher Button (M3 Segment con Workspaces)
             Rectangle {
-                implicitHeight: 24
-                implicitWidth: 32
-                radius: 12
-                color: launcherMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
+                implicitHeight: 26
+                implicitWidth: 34
+                topLeftRadius: 13
+                bottomLeftRadius: 13
+                topRightRadius: 4
+                bottomRightRadius: 4
+                color: launcherMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.primaryContainer
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -72,7 +75,7 @@ PanelWindow {
                     anchors.centerIn: parent
                     text: "apps"
                     iconSize: 16
-                    color: Theme.primary
+                    color: Theme.onPrimaryContainer
                 }
 
                 MouseArea {
@@ -99,13 +102,13 @@ PanelWindow {
             screenTarget: root.screenTarget
         }
 
-        // RIGHT CLUSTER
+        // RIGHT CLUSTER: M3 Segmented Elements
         RowLayout {
             anchors {
                 right: parent.right
                 verticalCenter: parent.verticalCenter
             }
-            spacing: 8
+            spacing: 6
 
             // Secondary monitor: compact clock
             ClockPill {
@@ -124,13 +127,20 @@ PanelWindow {
                 screenTarget: root.screenTarget
             }
 
-            TrayPill {
-                visible: root.isPrimaryMonitor && (SystemTray.items.values.length > 0)
-            }
-
-            SystemPill {
+            // M3 Segmented Group (Tray + System Cluster)
+            RowLayout {
                 visible: root.isPrimaryMonitor
-                screenTarget: root.screenTarget
+                spacing: 2
+
+                TrayPill {
+                    id: trayPill
+                    visible: SystemTray.items.values.length > 0
+                }
+
+                SystemPill {
+                    screenTarget: root.screenTarget
+                    hasLeftSibling: trayPill.visible
+                }
             }
         }
     }

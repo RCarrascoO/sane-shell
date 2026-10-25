@@ -10,9 +10,15 @@ Rectangle {
     id: root
 
     visible: SystemTray.items.values.length > 0
-    implicitHeight: 24
+    implicitHeight: 26
     implicitWidth: visible ? (trayRow.implicitWidth + 16) : 0
-    radius: 12
+
+    // M3 Connected Segment con SystemPill
+    topLeftRadius: 13
+    bottomLeftRadius: 13
+    topRightRadius: 4
+    bottomRightRadius: 4
+
     color: Theme.surfaceContainer
 
     RowLayout {

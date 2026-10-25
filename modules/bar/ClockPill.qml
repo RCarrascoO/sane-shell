@@ -11,9 +11,9 @@ Rectangle {
     property var screenTarget: null
     readonly property bool isPopupOpen: Theme.activePopup === "calendar"
 
-    implicitHeight: 24
+    implicitHeight: 26
     implicitWidth: clockContent.implicitWidth + 20
-    radius: 12
+    radius: 13
     color: isPopupOpen
         ? Theme.primary
         : (clockMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
@@ -44,6 +44,12 @@ Rectangle {
         return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
     }
 
+    function formatBigDate(d) {
+        const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+        return `${days[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]}`;
+    }
+
     RowLayout {
         id: clockContent
         anchors.centerIn: parent
@@ -72,7 +78,7 @@ Rectangle {
         }
     }
 
-    // Android 16 Material 3 Expressive Calendar Popup
+    // M3 Official Docked Date Picker Popup (m3.material.io/components/date-pickers/specs)
     StyledPopup {
         id: calPopup
         popupId: "calendar"
@@ -81,8 +87,8 @@ Rectangle {
         hoverActivates: false
 
         contentItem: Rectangle {
-            implicitWidth: 280
-            implicitHeight: calCol.implicitHeight + 24
+            implicitWidth: 320
+            implicitHeight: calCol.implicitHeight + 32
             color: "transparent"
 
             ColumnLayout {
@@ -93,7 +99,34 @@ Rectangle {
                 }
                 spacing: 12
 
-                // Header: Month & Year
+                // 1. M3 HEADER: "FECHA ACTUAL" Label + Big Date
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    StyledText {
+                        text: "FECHA ACTUAL"
+                        font {
+                            family: Appearance.font.family.main
+                            pixelSize: 11
+                            weight: Font.DemiBold
+                            letterSpacing: 1.2
+                        }
+                        color: Theme.onSurfaceVariant
+                    }
+
+                    StyledText {
+                        text: root.formatBigDate(root.currentTime)
+                        font {
+                            family: Appearance.font.family.main
+                            pixelSize: 24
+                            weight: Font.Bold
+                        }
+                        color: Theme.onSurface
+                    }
+                }
+
+                // Month / Year Row
                 RowLayout {
                     Layout.fillWidth: true
                     StyledText {
@@ -102,15 +135,23 @@ Rectangle {
                             return `${months[root.currentTime.getMonth()]} ${root.currentTime.getFullYear()}`;
                         }
                         font {
-                            pixelSize: 16
-                            weight: Font.Bold
+                            family: Appearance.font.family.main
+                            pixelSize: 14
+                            weight: Font.DemiBold
                         }
                         color: Theme.primary
                     }
                     Item { Layout.fillWidth: true }
                 }
 
-                // Days of week header (L M X J V S D)
+                // M3 Divider line
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Theme.outlineVariant
+                }
+
+                // 2. DAYS OF WEEK HEADER (L M X J V S D)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 4
@@ -122,6 +163,7 @@ Rectangle {
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData
                             font {
+                                family: Appearance.font.family.main
                                 pixelSize: 11
                                 weight: Font.Bold
                             }
@@ -130,7 +172,7 @@ Rectangle {
                     }
                 }
 
-                // Days grid
+                // 3. DAYS GRID (M3 36x36 Circle for Today)
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 7
@@ -158,11 +200,16 @@ Rectangle {
                         model: parent.daysList
 
                         Rectangle {
+                            id: dayCell
                             required property var modelData
-                            Layout.preferredWidth: 30
-                            Layout.preferredHeight: 30
-                            radius: 15
-                            color: modelData.isToday ? Theme.primary : "transparent"
+                            Layout.preferredWidth: 36
+                            Layout.preferredHeight: 36
+                            radius: 18
+                            color: modelData.isToday
+                                ? Theme.primary
+                                : (dayMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+
+                            Behavior on color { ColorAnimation { duration: 120 } }
 
                             StyledText {
                                 anchors.centerIn: parent
@@ -174,6 +221,13 @@ Rectangle {
                                     weight: parent.modelData.isToday ? Font.Bold : Font.Normal
                                 }
                                 color: parent.modelData.isToday ? Theme.onPrimary : Theme.onSurface
+                            }
+
+                            MouseArea {
+                                id: dayMouse
+                                anchors.fill: parent
+                                hoverEnabled: parent.modelData.day > 0
+                                enabled: parent.modelData.day > 0
                             }
                         }
                     }

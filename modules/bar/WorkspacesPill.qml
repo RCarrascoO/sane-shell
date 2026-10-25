@@ -11,13 +11,16 @@ RowLayout {
     property string screenName: "DVI-D-1"
     property bool showTitle: true
 
-    spacing: 8
+    spacing: 6
 
-    // Workspaces pill container
+    // Workspaces pill container con esquinas conectadas M3 al launcher
     Rectangle {
-        implicitHeight: 24
+        implicitHeight: 26
         implicitWidth: wsRow.implicitWidth + 16
-        radius: 12
+        topLeftRadius: 4
+        bottomLeftRadius: 4
+        topRightRadius: 13
+        bottomRightRadius: 13
         color: Theme.surfaceContainer
 
         RowLayout {
@@ -32,7 +35,7 @@ RowLayout {
                     id: wsRect
                     required property var modelData
 
-                    // Android 16 expressive dynamic capsule indicators
+                    // Android 16 / M3 expressive dynamic capsule indicators
                     height: modelData.isActive ? 10 : 8
                     radius: modelData.isActive ? 5 : 4
                     width: modelData.isActive ? 28 : (modelData.hasWindows ? 10 : 8)
@@ -65,9 +68,9 @@ RowLayout {
     // Active Window Title Pill (Capsule showing active app)
     Rectangle {
         visible: root.showTitle && (NiriState.activeWindowTitle.length > 0)
-        implicitHeight: 24
+        implicitHeight: 26
         implicitWidth: Math.min(240, titleText.implicitWidth + 20)
-        radius: 12
+        radius: 13
         color: Theme.surfaceContainer
 
         StyledText {

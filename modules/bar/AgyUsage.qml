@@ -18,12 +18,12 @@ Rectangle {
     readonly property bool running: quotaData?.running ?? false
     readonly property bool isPopupOpen: Theme.activePopup === "agy"
 
-    implicitHeight: 24
+    implicitHeight: 26
     implicitWidth: contentRow.implicitWidth + 20
-    radius: 12
+    radius: 13
     color: isPopupOpen
         ? Theme.primary
-        : (agyMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
+        : (agyMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.secondaryContainer)
 
     Behavior on color {
         ColorAnimation { duration: 150 }
@@ -65,7 +65,7 @@ Rectangle {
     RowLayout {
         id: contentRow
         anchors.centerIn: parent
-        spacing: 5
+        spacing: 6
 
         // Centered Ring indicator with perfectly aligned Gemini icon
         Item {
@@ -81,7 +81,7 @@ Rectangle {
                     ? Theme.onPrimary
                     : (root.percentage <= 15
                         ? Theme.error
-                        : (root.percentage <= 40 ? Theme.warning : "#52B768"))
+                        : (root.percentage <= 40 ? Theme.warning : Theme.secondary))
                 colSecondary: root.isPopupOpen ? Qt.rgba(0, 0, 0, 0.2) : Qt.rgba(1, 1, 1, 0.15)
                 enableAnimation: true
             }
@@ -94,7 +94,7 @@ Rectangle {
                 colorize: true
                 color: root.isPopupOpen
                     ? Theme.onPrimary
-                    : (root.busy ? Theme.primary : Theme.onSurfaceVariant)
+                    : (root.busy ? Theme.primary : Theme.onSecondaryContainer)
 
                 SequentialAnimation on opacity {
                     running: root.busy
@@ -105,7 +105,7 @@ Rectangle {
             }
         }
 
-        // Percentage text
+        // Percentage text en color tonal M3
         StyledText {
             Layout.alignment: Qt.AlignVCenter
             text: `${root.percentage}%`
@@ -116,7 +116,7 @@ Rectangle {
             }
             color: root.isPopupOpen
                 ? Theme.onPrimary
-                : (root.percentage <= 15 ? Theme.error : (root.percentage <= 40 ? Theme.warning : Theme.onSurface))
+                : (root.percentage <= 15 ? Theme.error : (root.percentage <= 40 ? Theme.warning : Theme.onSecondaryContainer))
         }
     }
 
