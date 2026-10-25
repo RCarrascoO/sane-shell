@@ -8,42 +8,99 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>sane-deck • M3 Companion</title>
-  <link rel="manifest" href="/manifest.json?v=3">
-  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="manifest" href="/manifest.json?v=4">
+  <link rel="stylesheet" href="/style.css?v=4">
 </head>
 <body>
   <div class="deck-container">
-    <!-- Top App Bar / Telemetry -->
+    <!-- Top App Bar -->
     <header class="top-app-bar">
       <div class="brand">
         <span class="status-dot" id="conn-dot"></span>
         <span class="brand-title">sane-deck</span>
+      </div>
+      <div class="top-actions">
         <button class="icon-chip-btn" id="btn-fullscreen" title="Pantalla Completa">
           <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
         </button>
-      </div>
-      <div class="telemetry-chips">
-        <div class="m3-chip" id="chip-phone" title="Batería del Teléfono (ADB)">
-          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
-          <span id="stat-phone">--%</span>
-        </div>
-        <div class="m3-chip" id="chip-ram" title="Memoria RAM Activa">
-          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M2 7h20v10H2V7zm2 2v6h16V9H4zm3 1h2v4H7v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4z"/></svg>
-          <span id="stat-ram">-- GB</span>
-        </div>
-        <div class="m3-chip" id="chip-cpu" title="Uso y Temperatura de CPU">
-          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M5 5h14v14H5V5zm2 2v10h10V7H7zm2-4h2v2H9V3zm4 0h2v2h-2V3zm-4 16h2v2H9v-2zm4 0h2v2h-2v-2zM1 9h2v2H1V9zm0 4h2v2H1v-2zm20-4h2v2h-2V9zm0 4h2v2h-2v-2z"/></svg>
-          <span id="stat-cpu">--%</span>
-        </div>
-        <div class="m3-chip" id="chip-gpu" title="Temperatura GPU (Radeon)">
-          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-          <span id="stat-gpu">--°C</span>
-        </div>
       </div>
     </header>
 
     <!-- Main Grid Content -->
     <main class="deck-content">
+      <!-- Pixel Battery-Style Performance Widget -->
+      <section class="m3-card pixel-widget-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            <h2 class="card-title">Rendimiento & Batería</h2>
+          </div>
+          <span class="focused-app-badge" id="focused-app-title">Niri</span>
+        </div>
+
+        <div class="pixel-battery-grid">
+          <!-- CPU Gauge -->
+          <div class="pixel-gauge-item">
+            <div class="gauge-ring-wrapper">
+              <svg class="gauge-svg" viewBox="0 0 100 100">
+                <circle class="gauge-track" cx="50" cy="50" r="40" />
+                <circle class="gauge-fill gauge-cpu" id="ring-cpu" cx="50" cy="50" r="40" />
+              </svg>
+              <div class="gauge-center">
+                <svg class="gauge-icon" viewBox="0 0 24 24"><path d="M5 5h14v14H5V5zm2 2v10h10V7H7zm2-4h2v2H9V3zm4 0h2v2h-2V3zm-4 16h2v2H9v-2zm4 0h2v2h-2v-2zM1 9h2v2H1V9zm0 4h2v2H1v-2zm20-4h2v2h-2V9zm0 4h2v2h-2v-2z"/></svg>
+              </div>
+            </div>
+            <div class="gauge-val" id="val-cpu">--%</div>
+            <div class="gauge-sub" id="sub-cpu">CPU • --°C</div>
+          </div>
+
+          <!-- RAM Gauge -->
+          <div class="pixel-gauge-item">
+            <div class="gauge-ring-wrapper">
+              <svg class="gauge-svg" viewBox="0 0 100 100">
+                <circle class="gauge-track" cx="50" cy="50" r="40" />
+                <circle class="gauge-fill gauge-ram" id="ring-ram" cx="50" cy="50" r="40" />
+              </svg>
+              <div class="gauge-center">
+                <svg class="gauge-icon" viewBox="0 0 24 24"><path d="M2 7h20v10H2V7zm2 2v6h16V9H4zm3 1h2v4H7v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4z"/></svg>
+              </div>
+            </div>
+            <div class="gauge-val" id="val-ram">--%</div>
+            <div class="gauge-sub" id="sub-ram">RAM • -- GB</div>
+          </div>
+
+          <!-- GPU Gauge -->
+          <div class="pixel-gauge-item">
+            <div class="gauge-ring-wrapper">
+              <svg class="gauge-svg" viewBox="0 0 100 100">
+                <circle class="gauge-track" cx="50" cy="50" r="40" />
+                <circle class="gauge-fill gauge-gpu" id="ring-gpu" cx="50" cy="50" r="40" />
+              </svg>
+              <div class="gauge-center">
+                <svg class="gauge-icon" viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+              </div>
+            </div>
+            <div class="gauge-val" id="val-gpu">--°C</div>
+            <div class="gauge-sub" id="sub-gpu">GPU • Radeon</div>
+          </div>
+
+          <!-- Phone Battery Gauge -->
+          <div class="pixel-gauge-item">
+            <div class="gauge-ring-wrapper">
+              <svg class="gauge-svg" viewBox="0 0 100 100">
+                <circle class="gauge-track" cx="50" cy="50" r="40" />
+                <circle class="gauge-fill gauge-phone" id="ring-phone" cx="50" cy="50" r="40" />
+              </svg>
+              <div class="gauge-center" id="phone-center-wrapper">
+                <svg class="gauge-icon" id="phone-center-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+              </div>
+            </div>
+            <div class="gauge-val" id="val-phone">--%</div>
+            <div class="gauge-sub" id="sub-phone">Mate 20 • USB</div>
+          </div>
+        </div>
+      </section>
+
       <!-- Section 1: PipeWire Mixer -->
       <section class="m3-card mixer-card">
         <div class="card-header">
@@ -91,7 +148,6 @@
             <svg class="section-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h5v2H8v-2z"/></svg>
             <h2 class="card-title">Niri Workspaces</h2>
           </div>
-          <span class="focused-app-badge" id="focused-app-title">Niri</span>
         </div>
 
         <div class="workspaces-group">
@@ -183,6 +239,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=4"></script>
 </body>
 </html>

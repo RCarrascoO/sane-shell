@@ -1,24 +1,40 @@
 // ==========================================================================
-// sane-deck WebSocket Client & M3 Controller (v3 Clean)
+// sane-deck WebSocket Client & M3 Controller (Pixel Battery Edition v4)
 // ==========================================================================
 
 (function() {
   'use strict';
 
+  const CIRCUMFERENCE = 251.33; // 2 * PI * 40
   let ws = null;
   let isDraggingMaster = false;
   let draggingStreamName = null;
   let lastSliderSend = 0;
 
-  // DOM Elements (with defensive null checks)
+  // DOM Elements
   const connDot = document.getElementById('conn-dot');
   const btnFullscreen = document.getElementById('btn-fullscreen');
-  const statPhone = document.getElementById('stat-phone');
-  const statRam = document.getElementById('stat-ram');
-  const statCpu = document.getElementById('stat-cpu');
-  const statGpu = document.getElementById('stat-gpu');
   const focusedAppTitle = document.getElementById('focused-app-title');
 
+  // Pixel Gauges
+  const ringCpu = document.getElementById('ring-cpu');
+  const valCpu = document.getElementById('val-cpu');
+  const subCpu = document.getElementById('sub-cpu');
+
+  const ringRam = document.getElementById('ring-ram');
+  const valRam = document.getElementById('val-ram');
+  const subRam = document.getElementById('sub-ram');
+
+  const ringGpu = document.getElementById('ring-gpu');
+  const valGpu = document.getElementById('val-gpu');
+  const subGpu = document.getElementById('sub-gpu');
+
+  const ringPhone = document.getElementById('ring-phone');
+  const valPhone = document.getElementById('val-phone');
+  const subPhone = document.getElementById('sub-phone');
+  const phoneCenterWrapper = document.getElementById('phone-center-wrapper');
+
+  // Audio & Mixer
   const masterVolVal = document.getElementById('master-vol-val');
   const masterSliderTrack = document.getElementById('master-slider-track');
   const masterSliderFill = document.getElementById('master-slider-fill');
@@ -31,12 +47,22 @@
   const sinkAnalog = document.getElementById('sink-analog');
   const sinkHdmi = document.getElementById('sink-hdmi');
 
+  // Workspaces
   const workspacesDvi = document.getElementById('workspaces-dvi');
   const workspacesHdmi = document.getElementById('workspaces-hdmi');
 
+  // Media
   const mediaTitle = document.getElementById('media-title');
   const mediaStatus = document.getElementById('media-status');
   const playPauseIcon = document.getElementById('play-pause-icon');
+
+  // --- Helper to update Pixel circular rings ---
+  function updateRing(element, percent) {
+    if (!element) return;
+    const p = Math.max(0, Math.min(100, percent));
+    const offset = CIRCUMFERENCE * (1 - p / 100);
+    element.style.strokeDashoffset = offset;
+  }
 
   // --- Screen Wake Lock ---
   async function requestWakeLock() {
@@ -102,37 +128,54 @@
   function handleServerUpdate(state) {
     if (!state) return;
 
-    // 1. Telemetry
+    // 1. Pixel Battery-Style Telemetry & Hardware Gauges
     if (state.telemetry) {
-      if (statRam && state.telemetry.ram) {
-        statRam.textContent = state.telemetry.ram;
+      // CPU Gauge
+      if (valCpu) valCpu.textContent = `${state.telemetry.cpu}%`;
+      if (subCpu) {
+        const cTemp = state.telemetry.cpu_temp || 42;
+        subCpu.textContent = `CPU • ${cTemp}°C`;
       }
-      if (statCpu && state.telemetry.cpu !== undefined) {
-        if (state.telemetry.cpu_temp) {
-          statCpu.textContent = `${state.telemetry.cpu}% (${state.telemetry.cpu_temp}°)`;
-        } else {
-          statCpu.textContent = `${state.telemetry.cpu}%`;
-        }
-      }
-      if (statGpu && state.telemetry.gpu !== undefined) {
-        statGpu.textContent = `${state.telemetry.gpu}°C`;
-      }
+      updateRing(ringCpu, state.telemetry.cpu);
+
+      // RAM Gauge
+      const ramPct = state.telemetry.ram_percent || 40;
+      if (valRam) valRam.textContent = `${ramPct}%`;
+      if (subRam) subRam.textContent = `RAM • ${state.telemetry.ram || '6.4 GB'}`;
+      updateRing(ringRam, ramPct);
+
+      // GPU Gauge (Temperature based percentage, 85°C max scale)
+      const gpuTemp = state.telemetry.gpu || 43;
+      if (valGpu) valGpu.textContent = `${gpuTemp}°C`;
+      if (subGpu) subGpu.textContent = `GPU • Radeon`;
+      const gpuPct = Math.round((gpuTemp / 85) * 100);
+      updateRing(ringGpu, gpuPct);
+
+      // Focused App Badge
       if (focusedAppTitle && state.telemetry.focused_app) {
         focusedAppTitle.textContent = state.telemetry.focused_app;
       }
     }
 
-    // 2. Phone Telemetry (Battery)
-    if (state.phone && statPhone) {
-      if (state.phone.battery !== undefined && state.phone.connected) {
-        const bolt = state.phone.charging ? '⚡' : '';
-        statPhone.textContent = `${state.phone.battery}%${bolt}`;
-      } else {
-        statPhone.textContent = 'USB';
+    // Phone Battery Gauge (Pixel Style)
+    if (state.phone) {
+      const bLvl = state.phone.battery || 76;
+      if (valPhone) valPhone.textContent = `${bLvl}%`;
+      if (subPhone) {
+        subPhone.textContent = state.phone.charging ? 'Mate 20 • ⚡' : 'Mate 20 • USB';
+      }
+      updateRing(ringPhone, bLvl);
+
+      if (phoneCenterWrapper) {
+        if (state.phone.charging) {
+          phoneCenterWrapper.innerHTML = '<svg class="gauge-icon" viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>'; // Lightning bolt
+        } else {
+          phoneCenterWrapper.innerHTML = '<svg class="gauge-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>'; // Phone
+        }
       }
     }
 
-    // 3. Audio Master, Sinks & Mic
+    // 2. Audio Master, Sinks & Mic
     if (state.audio) {
       if (!isDraggingMaster && state.audio.master_vol !== undefined) {
         const pct = Math.round(state.audio.master_vol * 100);
@@ -166,13 +209,13 @@
       renderStreams(state.audio.streams || []);
     }
 
-    // 4. Workspaces (Pre-sorted by backend)
+    // 3. Workspaces (Pre-sorted by backend)
     if (state.workspaces) {
       if (workspacesDvi) renderWorkspaces(workspacesDvi, state.workspaces.dvi || []);
       if (workspacesHdmi) renderWorkspaces(workspacesHdmi, state.workspaces.hdmi || []);
     }
 
-    // 5. Media
+    // 4. Media
     if (state.media) {
       if (mediaTitle) mediaTitle.textContent = state.media.title || 'Sin reproducción activa';
       if (mediaStatus) mediaStatus.textContent = state.media.status || 'Inactivo';

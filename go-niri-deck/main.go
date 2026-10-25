@@ -31,6 +31,7 @@ var webFiles embed.FS
 
 type TelemetryState struct {
 	RAM        string `json:"ram"`
+	RAMPercent int    `json:"ram_percent"`
 	CPU        int    `json:"cpu"`
 	CPUTemp    int    `json:"cpu_temp"`
 	GPU        int    `json:"gpu"`
@@ -207,10 +208,10 @@ func getCPUUsage() int {
 	return 0
 }
 
-func getRAMUsage() string {
+func getRAMUsage() (string, int) {
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
-		return "-- GB"
+		return "-- GB", 0
 	}
 	defer file.Close()
 
@@ -241,14 +242,15 @@ func getRAMUsage() string {
 			activeSlab = slabKB - sreclaimKB
 		}
 		usedKB := anonKB + shmemKB + activeSlab
+		pct := int(usedKB * 100 / totalKB)
 		usedMB := usedKB / 1024
 		if usedMB < 1000 {
-			return fmt.Sprintf("%d MB", usedMB)
+			return fmt.Sprintf("%d MB", usedMB), pct
 		}
 		usedGB := float64(usedKB) / (1024.0 * 1024.0)
-		return fmt.Sprintf("%.1f GB", usedGB)
+		return fmt.Sprintf("%.1f GB", usedGB), pct
 	}
-	return "-- GB"
+	return "-- GB", 0
 }
 
 func getCPUTemp() int {
@@ -578,10 +580,12 @@ func getMediaState() MediaState {
 func collectFullState() FullState {
 	masterVol, masterMuted := parseWPVolume("@DEFAULT_AUDIO_SINK@")
 	_, micMuted := parseWPVolume("@DEFAULT_AUDIO_SOURCE@")
+	ramStr, ramPct := getRAMUsage()
 
 	return FullState{
 		Telemetry: TelemetryState{
-			RAM:        getRAMUsage(),
+			RAM:        ramStr,
+			RAMPercent: ramPct,
 			CPU:        getCPUUsage(),
 			CPUTemp:    getCPUTemp(),
 			GPU:        getGPUTemp(),
