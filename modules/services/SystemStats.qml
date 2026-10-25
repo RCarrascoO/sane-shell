@@ -44,7 +44,7 @@ Singleton {
         command: [
             "sh", "-c",
             "cat /proc/stat | head -n 1; echo '---'; " +
-            "cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'; echo '---'; " +
+            "grep -E '^(MemTotal|AnonPages|Shmem|Slab|SReclaimable):' /proc/meminfo; echo '---'; " +
             "cat /sys/class/drm/card*/device/hwmon/hwmon*/temp1_input 2>/dev/null | head -n 1; echo '---'; " +
             "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null"
         ]
@@ -71,15 +71,19 @@ Singleton {
                             root._prevIdle = idle;
                         }
 
-                        // 2. RAM
+                        // 2. RAM (Real Active Memory: AnonPages + Shmem + Unreclaimable Slab)
                         const memLines = sections[1].trim().split("\n");
-                        let totalKB = 0, availKB = 0;
+                        let totalKB = 0, anonKB = 0, shmemKB = 0, slabKB = 0, sreclaimKB = 0;
                         for (let line of memLines) {
-                            if (line.startsWith("MemTotal:")) totalKB = parseInt(line.replace(/\D/g, "")) || 0;
-                            if (line.startsWith("MemAvailable:")) availKB = parseInt(line.replace(/\D/g, "")) || 0;
+                            const val = parseInt(line.replace(/\D/g, "")) || 0;
+                            if (line.startsWith("MemTotal:")) totalKB = val;
+                            else if (line.startsWith("AnonPages:")) anonKB = val;
+                            else if (line.startsWith("Shmem:")) shmemKB = val;
+                            else if (line.startsWith("Slab:")) slabKB = val;
+                            else if (line.startsWith("SReclaimable:")) sreclaimKB = val;
                         }
                         if (totalKB > 0) {
-                            const usedKB = totalKB - availKB;
+                            const usedKB = anonKB + shmemKB + Math.max(0, slabKB - sreclaimKB);
                             root.ramPercent = Math.max(0, Math.min(100, Math.round((usedKB / totalKB) * 100)));
                             root.ramUsedGB = (usedKB / (1024 * 1024)).toFixed(1);
                         }
