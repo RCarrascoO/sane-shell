@@ -10,13 +10,11 @@ import qs.modules.bar
 ShellRoot {
     id: root
 
-    Scope {
-        Repeater {
-            model: Quickshell.screens
-            TopBar {
-                required property var modelData
-                screenTarget: modelData
-            }
+    Variants {
+        model: Quickshell.screens
+        TopBar {
+            required property var modelData
+            screenTarget: modelData
         }
     }
 }
