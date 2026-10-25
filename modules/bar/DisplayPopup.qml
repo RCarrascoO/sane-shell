@@ -436,7 +436,7 @@ StyledPopup {
                                             Layout.fillWidth: true
                                             implicitHeight: 26
                                             buttonRadius: 13
-                                            readonly property bool isCurrent: (modelData.pos === "right" && monitorCard.modelData.x >= 1360) || (modelData.pos === "left" && monitorCard.modelData.x < 0)
+                                            readonly property bool isCurrent: monitorCard.modelData.posMode === modelData.pos
                                             colBackground: isCurrent ? Theme.secondaryContainer : Theme.surfaceContainerHigh
                                             colBackgroundHover: isCurrent ? Theme.secondaryContainer : Theme.surfaceContainerHighest
                                             onClicked: {

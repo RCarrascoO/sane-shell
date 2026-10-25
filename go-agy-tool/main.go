@@ -779,6 +779,9 @@ type DisplayInfo struct {
 	Scale       float64  `json:"scale"`
 	X           int      `json:"x"`
 	Y           int      `json:"y"`
+	Width       int      `json:"width"`
+	Height      int      `json:"height"`
+	PosMode     string   `json:"posMode"`
 }
 
 func runDisplays() {
@@ -792,6 +795,13 @@ func runDisplays() {
 	if err := json.Unmarshal(out, &rawMap); err != nil {
 		fmt.Println("[]")
 		return
+	}
+
+	dviX, dviY, dviH := 0, 0, 768
+	if dvi, ok := rawMap["DVI-D-1"]; ok && dvi.Logical != nil {
+		dviX = dvi.Logical.X
+		dviY = dvi.Logical.Y
+		dviH = dvi.Logical.Height
 	}
 
 	var displays []DisplayInfo
@@ -814,13 +824,27 @@ func runDisplays() {
 
 		tf := "Normal"
 		scale := 1.0
-		x := 0
-		y := 0
+		x, y, w, h := 0, 0, 1360, 768
 		if raw.Logical != nil {
 			tf = raw.Logical.Transform
 			scale = raw.Logical.Scale
 			x = raw.Logical.X
 			y = raw.Logical.Y
+			w = raw.Logical.Width
+			h = raw.Logical.Height
+		}
+
+		posMode := "right"
+		if name != "DVI-D-1" {
+			if y < dviY {
+				posMode = "above"
+			} else if y >= dviY+dviH {
+				posMode = "below"
+			} else if x < dviX {
+				posMode = "left"
+			} else {
+				posMode = "right"
+			}
 		}
 
 		displays = append(displays, DisplayInfo{
@@ -833,6 +857,9 @@ func runDisplays() {
 			Scale:       scale,
 			X:           x,
 			Y:           y,
+			Width:       w,
+			Height:      h,
+			PosMode:     posMode,
 		})
 	}
 
@@ -869,30 +896,50 @@ func runSetDisplay(output, mode, transform, posMode string) {
 		}
 	}
 
+	// Query current logical dimensions after mode/transform change
+	dviW, dviH := 1360, 768
+	secW, secH := 768, 1366
+	if outBytes, err := exec.Command("niri", "msg", "-j", "outputs").Output(); err == nil {
+		var rawMap map[string]NiriOutputRaw
+		if json.Unmarshal(outBytes, &rawMap) == nil {
+			if dvi, ok := rawMap["DVI-D-1"]; ok && dvi.Logical != nil {
+				dviW = dvi.Logical.Width
+				dviH = dvi.Logical.Height
+			}
+			if sec, ok := rawMap[output]; ok && sec.Logical != nil {
+				secW = sec.Logical.Width
+				secH = sec.Logical.Height
+			}
+		}
+	}
+
 	posX := 0
 	posY := 0
 	hasPos := false
-	if output == "HDMI-A-1" {
+	if output != "DVI-D-1" && posMode != "" && posMode != "-" {
 		switch strings.ToLower(posMode) {
 		case "right":
-			posX = 1360
+			posX = dviW
 			posY = 0
 			hasPos = true
 		case "left":
-			posX = -768
+			posX = -secW
 			posY = 0
 			hasPos = true
 		case "above":
 			posX = 0
-			posY = -1366
+			posY = -secH
 			hasPos = true
 		case "below":
 			posX = 0
-			posY = 768
+			posY = dviH
 			hasPos = true
 		}
 		if hasPos {
-			_ = exec.Command("niri", "msg", "output", output, "position", "set", strconv.Itoa(posX), strconv.Itoa(posY)).Run()
+			// Always pin primary monitor at (0,0) first so Niri never auto-places it to the right of secondary
+			_ = exec.Command("niri", "msg", "output", "DVI-D-1", "position", "set", "--", "0", "0").Run()
+			// Use "--" so negative coordinates like -768 or -1366 are not parsed as CLI flags by clap
+			_ = exec.Command("niri", "msg", "output", output, "position", "set", "--", strconv.Itoa(posX), strconv.Itoa(posY)).Run()
 		}
 	}
 
@@ -903,6 +950,9 @@ func runSetDisplay(output, mode, transform, posMode string) {
 		lines := strings.Split(string(content), "\n")
 		var newLines []string
 		inOutputBlock := false
+		wroteMode := false
+		wroteTransform := false
+		wrotePos := false
 
 		for _, l := range lines {
 			trimmed := strings.TrimSpace(l)
@@ -911,6 +961,9 @@ func runSetDisplay(output, mode, transform, posMode string) {
 				outName = strings.Trim(outName, "\"")
 				if outName == output {
 					inOutputBlock = true
+					wroteMode = false
+					wroteTransform = false
+					wrotePos = false
 					newLines = append(newLines, l)
 					continue
 				}
@@ -918,6 +971,15 @@ func runSetDisplay(output, mode, transform, posMode string) {
 
 			if inOutputBlock {
 				if trimmed == "}" {
+					if mode != "" && mode != "-" && !wroteMode {
+						newLines = append(newLines, fmt.Sprintf("    mode \"%s\"", mode))
+					}
+					if transform != "" && transform != "-" && !wroteTransform {
+						newLines = append(newLines, fmt.Sprintf("    transform \"%s\"", strings.ToLower(transform)))
+					}
+					if hasPos && !wrotePos {
+						newLines = append(newLines, fmt.Sprintf("    position x=%d y=%d", posX, posY))
+					}
 					inOutputBlock = false
 					newLines = append(newLines, l)
 					continue
@@ -925,14 +987,17 @@ func runSetDisplay(output, mode, transform, posMode string) {
 
 				if strings.HasPrefix(trimmed, "mode ") && mode != "" && mode != "-" {
 					newLines = append(newLines, fmt.Sprintf("    mode \"%s\"", mode))
+					wroteMode = true
 					continue
 				}
 				if strings.HasPrefix(trimmed, "transform ") && transform != "" && transform != "-" {
 					newLines = append(newLines, fmt.Sprintf("    transform \"%s\"", strings.ToLower(transform)))
+					wroteTransform = true
 					continue
 				}
 				if strings.HasPrefix(trimmed, "position ") && hasPos {
 					newLines = append(newLines, fmt.Sprintf("    position x=%d y=%d", posX, posY))
+					wrotePos = true
 					continue
 				}
 			}
