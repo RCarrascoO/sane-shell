@@ -187,6 +187,7 @@ StyledPopup {
                             to: 6000
                             value: SystemStats.nightLightTemp
                             icon: "thermostat"
+                            unit: "K"
                             onMoved: val => SystemStats.setNightLightTemp(val)
                         }
 

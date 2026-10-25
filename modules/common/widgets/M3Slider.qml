@@ -10,6 +10,7 @@ Item {
     property real from: 0
     property real to: 100
     property string icon: "volume_up"
+    property string unit: "%"
     property bool isMuted: false
 
     signal moved(real val)
@@ -95,14 +96,14 @@ Item {
             ColorAnimation { duration: 150 }
         }
 
-        // Percentage label
+        // Value label
         StyledText {
             anchors {
                 right: stopDot.left
                 rightMargin: 8
                 verticalCenter: parent.verticalCenter
             }
-            text: `${Math.round(root.value)}%`
+            text: `${Math.round(root.value)}${root.unit}`
             font {
                 family: Appearance.font.family.numbers
                 pixelSize: 12
