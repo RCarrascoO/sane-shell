@@ -7,11 +7,16 @@ echo "==> Instalando sane-shell (Material 3 Expressive + Catppuccin Mocha)..."
 # 1. Crear directorios base
 mkdir -p "$HOME/.local/bin" "$HOME/.cache/sane-shell" "$HOME/.mozilla/native-messaging-hosts" "$HOME/.config/fuzzel"
 
-# 2. Compilar agy-tool en Go
+# 2. Compilar herramientas en Go (agy-tool y niri-deck)
 echo "==> Compilando agy-tool (Go)..."
 cd "$SCRIPT_DIR/go-agy-tool"
 go build -ldflags="-s -w" -o "$HOME/.local/bin/agy-tool" main.go
 chmod +x "$HOME/.local/bin/agy-tool"
+
+echo "==> Compilando niri-deck (Go - Material 3 Companion)..."
+cd "$SCRIPT_DIR/go-niri-deck"
+go build -ldflags="-s -w" -o "$HOME/.local/bin/niri-deck" main.go
+chmod +x "$HOME/.local/bin/niri-deck"
 
 # 3. Crear wrapper de native messaging
 cat << 'EOF' > "$HOME/.local/bin/agy-gemini-bridge"

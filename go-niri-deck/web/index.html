@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#11111b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>sane-deck • M3 Companion</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="deck-container">
+    <!-- Top App Bar / Telemetry -->
+    <header class="top-app-bar">
+      <div class="brand">
+        <span class="status-dot" id="conn-dot"></span>
+        <span class="brand-title">sane-deck</span>
+      </div>
+      <div class="telemetry-chips">
+        <div class="m3-chip" id="chip-ram">
+          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M2 7h20v10H2V7zm2 2v6h16V9H4zm3 1h2v4H7v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4z"/></svg>
+          <span id="stat-ram">-- MB</span>
+        </div>
+        <div class="m3-chip" id="chip-cpu">
+          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M5 5h14v14H5V5zm2 2v10h10V7H7zm2-4h2v2H9V3zm4 0h2v2h-2V3zm-4 16h2v2H9v-2zm4 0h2v2h-2v-2zM1 9h2v2H1V9zm0 4h2v2H1v-2zm20-4h2v2h-2V9zm0 4h2v2h-2v-2z"/></svg>
+          <span id="stat-cpu">-- %</span>
+        </div>
+        <div class="m3-chip" id="chip-gpu">
+          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span id="stat-gpu">-- °C</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid Content -->
+    <main class="deck-content">
+      <!-- Section 1: PipeWire Mixer -->
+      <section class="m3-card mixer-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <h2 class="card-title">Audio Mixer</h2>
+          </div>
+          <button class="m3-button mic-button" id="mic-toggle-btn" aria-label="Silenciar Micrófono">
+            <svg id="mic-icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            <span id="mic-status-label">Micrófono</span>
+          </button>
+        </div>
+
+        <!-- Master Slider -->
+        <div class="slider-row">
+          <div class="slider-info">
+            <span class="slider-label">Master (Ryzen HD)</span>
+            <span class="slider-value" id="master-vol-val">70%</span>
+          </div>
+          <div class="m3-slider-container" id="master-slider-track">
+            <div class="m3-slider-fill" id="master-slider-fill" style="width: 70%;"></div>
+            <div class="m3-slider-thumb" id="master-slider-thumb" style="left: 70%;"></div>
+          </div>
+        </div>
+
+        <!-- Dynamic Streams Container -->
+        <div class="streams-list" id="streams-container">
+          <!-- Populated dynamically via JS (Zen, Vesktop, etc.) -->
+        </div>
+      </section>
+
+      <!-- Section 2: Niri Workspaces & Window -->
+      <section class="m3-card niri-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h5v2H8v-2z"/></svg>
+            <h2 class="card-title">Niri Workspaces</h2>
+          </div>
+          <span class="focused-app-badge" id="focused-app-title">Niri</span>
+        </div>
+
+        <div class="workspaces-group">
+          <span class="group-label">Monitor Principal (DVI-D-1)</span>
+          <div class="chips-row" id="workspaces-dvi"></div>
+        </div>
+
+        <div class="workspaces-group">
+          <span class="group-label">Monitor Secundario (HDMI-A-1)</span>
+          <div class="chips-row" id="workspaces-hdmi"></div>
+        </div>
+      </section>
+
+      <!-- Section 3: Quick Action Buttons -->
+      <section class="m3-card actions-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon" viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+            <h2 class="card-title">Atajos de Sistema</h2>
+          </div>
+        </div>
+
+        <div class="actions-grid">
+          <button class="m3-action-btn" data-action="power-off-monitors">
+            <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
+            <span>Apagar Monitores</span>
+          </button>
+          <button class="m3-action-btn" data-action="power-on-monitors">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            <span>Encender Monitores</span>
+          </button>
+          <button class="m3-action-btn" data-action="screenshot">
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            <span>Captura de Área</span>
+          </button>
+          <button class="m3-action-btn" data-action="toggle-window-floating">
+            <svg viewBox="0 0 24 24"><path d="M19 11h-8v6h8v-6zm4 8V5c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 0H3V5h18v14z"/></svg>
+            <span>Flotante / Mosaico</span>
+          </button>
+          <button class="m3-action-btn" data-action="fullscreen-window">
+            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            <span>Pantalla Completa</span>
+          </button>
+          <button class="m3-action-btn" data-action="close-window">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <span>Cerrar Ventana</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Section 4: Media Controller (playerctl) -->
+      <section class="m3-card media-card">
+        <div class="media-info">
+          <svg class="media-icon" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          <div class="media-texts">
+            <span class="media-title" id="media-title">Sin reproducción activa</span>
+            <span class="media-status" id="media-status">Inactivo</span>
+          </div>
+        </div>
+        <div class="media-controls">
+          <button class="media-btn" data-media="previous" aria-label="Anterior">
+            <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button class="media-btn play-pause-btn" data-media="play-pause" aria-label="Play/Pause">
+            <svg id="play-pause-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="media-btn" data-media="next" aria-label="Siguiente">
+            <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

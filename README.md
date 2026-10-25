@@ -97,7 +97,9 @@ Este proyecto sustituye por completo la suite anterior (`iNiR`), reduciendo drá
 | **Configuración sane-shell (Raíz)** | `/home/sane/.config/quickshell/sane-shell/` |
 | **Punto de Entrada QML** | `/home/sane/.config/quickshell/sane-shell/shell.qml` |
 | **Código Fuente Go `agy-tool`** | `/home/sane/.config/quickshell/sane-shell/go-agy-tool/main.go` |
-| **Binario Compilado Go** | `/home/sane/.local/bin/agy-tool` |
+| **Binario Compilado Go (`agy-tool`)** | `/home/sane/.local/bin/agy-tool` |
+| **Código Fuente Go `niri-deck` (M3 Companion)** | `/home/sane/.config/quickshell/sane-shell/go-niri-deck/main.go` |
+| **Binario Compilado Go (`niri-deck`)** | `/home/sane/.local/bin/niri-deck` |
 | **Script de Rollback de Emergencia** | `/home/sane/.local/bin/rollback-to-inir.sh` |
 | **Script Toggle de Tema (Mocha/Latte)** | `/home/sane/.config/quickshell/sane-shell/scripts/toggle-theme.sh` |
 | **Script de Instalación Limpia** | `/home/sane/.config/quickshell/sane-shell/install.sh` |
