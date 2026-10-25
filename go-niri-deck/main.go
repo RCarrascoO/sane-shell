@@ -93,27 +93,42 @@ type ClientCommand struct {
 }
 
 // -------------------------------------------------------------
-// Hub & WebSocket Management
+// Hub & WebSocket Management (Thread-Safe)
 // -------------------------------------------------------------
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+type SafeConn struct {
+	conn    *websocket.Conn
+	writeMu sync.Mutex
+}
+
+func (s *SafeConn) WriteMessage(messageType int, data []byte) error {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	return s.conn.WriteMessage(messageType, data)
+}
+
+func (s *SafeConn) Close() error {
+	return s.conn.Close()
+}
+
 type Hub struct {
-	clients    map[*websocket.Conn]bool
+	clients    map[*SafeConn]bool
 	broadcast  chan []byte
-	register   chan *websocket.Conn
-	unregister chan *websocket.Conn
+	register   chan *SafeConn
+	unregister chan *SafeConn
 	mu         sync.Mutex
 }
 
 func newHub() *Hub {
 	return &Hub{
-		clients:    make(map[*websocket.Conn]bool),
-		broadcast:  make(chan []byte),
-		register:   make(chan *websocket.Conn),
-		unregister: make(chan *websocket.Conn),
+		clients:    make(map[*SafeConn]bool),
+		broadcast:  make(chan []byte, 16),
+		register:   make(chan *SafeConn),
+		unregister: make(chan *SafeConn),
 	}
 }
 
@@ -686,18 +701,19 @@ func main() {
 			log.Printf("Error upgrading websocket: %v", err)
 			return
 		}
-		hub.register <- conn
+		safe := &SafeConn{conn: conn}
+		hub.register <- safe
 
 		// Initial state
 		initialState := collectFullState()
 		lastStreamsCache = initialState.Audio.Streams
 		if payload, err := json.Marshal(initialState); err == nil {
-			_ = conn.WriteMessage(websocket.TextMessage, payload)
+			_ = safe.WriteMessage(websocket.TextMessage, payload)
 		}
 
 		go func() {
 			defer func() {
-				hub.unregister <- conn
+				hub.unregister <- safe
 			}()
 			for {
 				_, message, err := conn.ReadMessage()
