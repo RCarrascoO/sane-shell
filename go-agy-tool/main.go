@@ -672,14 +672,276 @@ func runApps() {
 }
 
 // -------------------------------------------------------------
-// Subcommand: Toggle Popup
+// Subcommand: Focused Output & Popups
 // -------------------------------------------------------------
+
+func getFocusedOutput() string {
+	out, err := exec.Command("niri", "msg", "-j", "focused-output").Output()
+	if err == nil {
+		var res struct {
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(out, &res) == nil && res.Name != "" {
+			return res.Name
+		}
+	}
+
+	wsOut, err := exec.Command("niri", "msg", "-j", "workspaces").Output()
+	if err == nil {
+		var workspaces []struct {
+			IsFocused bool   `json:"is_focused"`
+			Output    string `json:"output"`
+		}
+		if json.Unmarshal(wsOut, &workspaces) == nil {
+			for _, ws := range workspaces {
+				if ws.IsFocused && ws.Output != "" {
+					return ws.Output
+				}
+			}
+		}
+	}
+
+	return "DVI-D-1"
+}
 
 func runTogglePopup(name string) {
 	if name == "" {
 		name = "appdrawer"
 	}
-	_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "togglePopup", name).Run()
+	out := getFocusedOutput()
+	_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "togglePopupOn", name, out).Run()
+}
+
+// -------------------------------------------------------------
+// Subcommands: OSD Quick Triggers
+// -------------------------------------------------------------
+
+func runVolume(action string) {
+	switch action {
+	case "up":
+		_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "changeVolume", "5").Run()
+	case "down":
+		_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "changeVolume", "-5").Run()
+	case "mute":
+		_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "toggleMute").Run()
+	}
+}
+
+func runBrightness(action string) {
+	switch action {
+	case "up":
+		_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "changeBrightness", "5").Run()
+	case "down":
+		_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "changeBrightness", "-5").Run()
+	}
+}
+
+func runMedia(action string) {
+	if action == "" {
+		action = "play-pause"
+	}
+	_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "triggerMedia", action).Run()
+}
+
+// -------------------------------------------------------------
+// Subcommands: Displays
+// -------------------------------------------------------------
+
+type DisplayMode struct {
+	Width       int  `json:"width"`
+	Height      int  `json:"height"`
+	RefreshRate int  `json:"refresh_rate"`
+	IsPreferred bool `json:"is_preferred"`
+}
+
+type NiriOutputRaw struct {
+	Make        string        `json:"make"`
+	Model       string        `json:"model"`
+	Modes       []DisplayMode `json:"modes"`
+	CurrentMode int           `json:"current_mode"`
+	Logical     *struct {
+		X         int     `json:"x"`
+		Y         int     `json:"y"`
+		Width     int     `json:"width"`
+		Height    int     `json:"height"`
+		Scale     float64 `json:"scale"`
+		Transform string  `json:"transform"`
+	} `json:"logical"`
+}
+
+type DisplayInfo struct {
+	Name        string   `json:"name"`
+	Make        string   `json:"make"`
+	Model       string   `json:"model"`
+	CurrentMode string   `json:"currentMode"`
+	Modes       []string `json:"modes"`
+	Transform   string   `json:"transform"`
+	Scale       float64  `json:"scale"`
+	X           int      `json:"x"`
+	Y           int      `json:"y"`
+}
+
+func runDisplays() {
+	out, err := exec.Command("niri", "msg", "-j", "outputs").Output()
+	if err != nil {
+		fmt.Println("[]")
+		return
+	}
+
+	var rawMap map[string]NiriOutputRaw
+	if err := json.Unmarshal(out, &rawMap); err != nil {
+		fmt.Println("[]")
+		return
+	}
+
+	var displays []DisplayInfo
+	for name, raw := range rawMap {
+		currModeStr := ""
+		if raw.CurrentMode >= 0 && raw.CurrentMode < len(raw.Modes) {
+			m := raw.Modes[raw.CurrentMode]
+			currModeStr = fmt.Sprintf("%dx%d@%.3f", m.Width, m.Height, float64(m.RefreshRate)/1000.0)
+		}
+
+		modeSet := make(map[string]bool)
+		var modeList []string
+		for _, m := range raw.Modes {
+			mStr := fmt.Sprintf("%dx%d@%.3f", m.Width, m.Height, float64(m.RefreshRate)/1000.0)
+			if !modeSet[mStr] {
+				modeSet[mStr] = true
+				modeList = append(modeList, mStr)
+			}
+		}
+
+		tf := "Normal"
+		scale := 1.0
+		x := 0
+		y := 0
+		if raw.Logical != nil {
+			tf = raw.Logical.Transform
+			scale = raw.Logical.Scale
+			x = raw.Logical.X
+			y = raw.Logical.Y
+		}
+
+		displays = append(displays, DisplayInfo{
+			Name:        name,
+			Make:        raw.Make,
+			Model:       raw.Model,
+			CurrentMode: currModeStr,
+			Modes:       modeList,
+			Transform:   tf,
+			Scale:       scale,
+			X:           x,
+			Y:           y,
+		})
+	}
+
+	// Sort DVI-D-1 first, then others
+	sort.Slice(displays, func(i, j int) bool {
+		if displays[i].Name == "DVI-D-1" {
+			return true
+		}
+		if displays[j].Name == "DVI-D-1" {
+			return false
+		}
+		return displays[i].Name < displays[j].Name
+	})
+
+	bytesOut, _ := json.Marshal(displays)
+	os.Stdout.Write(bytesOut)
+	fmt.Println()
+}
+
+func runSetDisplay(output, mode, transform, posMode string) {
+	if output == "" {
+		return
+	}
+
+	// 1. Live change via niri
+	if mode != "" && mode != "-" {
+		_ = exec.Command("niri", "msg", "output", output, "mode", mode).Run()
+	}
+
+	if transform != "" && transform != "-" {
+		tf := strings.ToLower(transform)
+		if tf == "normal" || tf == "90" || tf == "180" || tf == "270" {
+			_ = exec.Command("niri", "msg", "output", output, "transform", tf).Run()
+		}
+	}
+
+	posX := 0
+	posY := 0
+	hasPos := false
+	if output == "HDMI-A-1" {
+		switch strings.ToLower(posMode) {
+		case "right":
+			posX = 1360
+			posY = 0
+			hasPos = true
+		case "left":
+			posX = -768
+			posY = 0
+			hasPos = true
+		case "above":
+			posX = 0
+			posY = -1366
+			hasPos = true
+		case "below":
+			posX = 0
+			posY = 768
+			hasPos = true
+		}
+		if hasPos {
+			_ = exec.Command("niri", "msg", "output", output, "position", "set", strconv.Itoa(posX), strconv.Itoa(posY)).Run()
+		}
+	}
+
+	// 2. Persist to /home/sane/.config/niri/config.kdl
+	configPath := filepath.Join(getHomeDir(), ".config/niri/config.kdl")
+	content, err := os.ReadFile(configPath)
+	if err == nil {
+		lines := strings.Split(string(content), "\n")
+		var newLines []string
+		inOutputBlock := false
+
+		for _, l := range lines {
+			trimmed := strings.TrimSpace(l)
+			if strings.HasPrefix(trimmed, "output ") && strings.HasSuffix(trimmed, "{") {
+				outName := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(trimmed, "output "), "{"))
+				outName = strings.Trim(outName, "\"")
+				if outName == output {
+					inOutputBlock = true
+					newLines = append(newLines, l)
+					continue
+				}
+			}
+
+			if inOutputBlock {
+				if trimmed == "}" {
+					inOutputBlock = false
+					newLines = append(newLines, l)
+					continue
+				}
+
+				if strings.HasPrefix(trimmed, "mode ") && mode != "" && mode != "-" {
+					newLines = append(newLines, fmt.Sprintf("    mode \"%s\"", mode))
+					continue
+				}
+				if strings.HasPrefix(trimmed, "transform ") && transform != "" && transform != "-" {
+					newLines = append(newLines, fmt.Sprintf("    transform \"%s\"", strings.ToLower(transform)))
+					continue
+				}
+				if strings.HasPrefix(trimmed, "position ") && hasPos {
+					newLines = append(newLines, fmt.Sprintf("    position x=%d y=%d", posX, posY))
+					continue
+				}
+			}
+
+			newLines = append(newLines, l)
+		}
+
+		_ = os.WriteFile(configPath, []byte(strings.Join(newLines, "\n")), 0644)
+	}
 }
 
 // -------------------------------------------------------------
@@ -715,6 +977,44 @@ func main() {
 		runTogglePopup(name)
 	case "toggle-drawer":
 		runTogglePopup("appdrawer")
+	case "volume":
+		action := "up"
+		if len(os.Args) > 2 {
+			action = os.Args[2]
+		}
+		runVolume(action)
+	case "brightness":
+		action := "up"
+		if len(os.Args) > 2 {
+			action = os.Args[2]
+		}
+		runBrightness(action)
+	case "media":
+		action := "play-pause"
+		if len(os.Args) > 2 {
+			action = os.Args[2]
+		}
+		runMedia(action)
+	case "displays":
+		runDisplays()
+	case "set-display":
+		out := ""
+		mode := ""
+		tf := ""
+		pos := ""
+		if len(os.Args) > 2 {
+			out = os.Args[2]
+		}
+		if len(os.Args) > 3 {
+			mode = os.Args[3]
+		}
+		if len(os.Args) > 4 {
+			tf = os.Args[4]
+		}
+		if len(os.Args) > 5 {
+			pos = os.Args[5]
+		}
+		runSetDisplay(out, mode, tf, pos)
 	case "quota":
 		fallthrough
 	default:

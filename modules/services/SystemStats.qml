@@ -20,6 +20,7 @@ Singleton {
     property int volume: 50
     property bool isMuted: false
     property int brightness: 100
+    property bool _audioInitialized: false
 
     // Network
     property string networkType: "ethernet" // "ethernet" | "wifi" | "disconnected"
@@ -35,15 +36,20 @@ Singleton {
 
     // Night Light
     property bool nightLightActive: false
+    property int nightLightTemp: 4000
 
     // OSD State
     property bool osdVisible: false
-    property string osdType: "volume" // "volume" | "brightness"
+    property string osdType: "volume" // "volume" | "brightness" | "media"
     property int osdValue: 50
     property string osdIcon: "volume_up"
+    property string osdTitle: ""
+    property string osdSubtitle: ""
+    property string osdArtUrl: ""
 
     property real _prevIdle: 0
     property real _prevTotal: 0
+    property string _prevMediaTitle: ""
 
     Timer {
         id: osdHideTimer
@@ -54,11 +60,12 @@ Singleton {
         }
     }
 
-    function triggerOsd(type, value, icon) {
+    function triggerOsd(type, value, icon, durationMs) {
         osdType = type;
         osdValue = Math.round(value);
         osdIcon = icon;
         osdVisible = true;
+        osdHideTimer.interval = durationMs ? durationMs : 2000;
         osdHideTimer.restart();
     }
 
@@ -68,6 +75,11 @@ Singleton {
         volActionProcess.running = true;
         root.volume = val;
         triggerOsd("volume", val, isMuted ? "volume_off" : (val === 0 ? "volume_mute" : (val < 50 ? "volume_down" : "volume_up")));
+    }
+
+    function changeVolume(delta) {
+        const val = Math.max(0, Math.min(100, root.volume + delta));
+        setVolume(val);
     }
 
     function toggleMute() {
@@ -83,6 +95,20 @@ Singleton {
         brightActionProcess.command = ["brightnessctl", "set", `${val}%`];
         brightActionProcess.running = true;
         triggerOsd("brightness", val, val < 30 ? "brightness_low" : (val < 70 ? "brightness_medium" : "brightness_high"));
+    }
+
+    function changeBrightness(delta) {
+        const val = Math.max(5, Math.min(100, root.brightness + delta));
+        setBrightness(val);
+    }
+
+    function setNightLightTemp(temp) {
+        const clamped = Math.max(2500, Math.min(6500, Math.round(temp / 100) * 100));
+        root.nightLightTemp = clamped;
+        Quickshell.execDetached(["sh", "-c", `printf '%d\\n' ${clamped} > "$HOME/.cache/sane-shell-nightlight.txt"`]);
+        if (root.nightLightActive) {
+            Quickshell.execDetached(["sh", "-c", `pkill -x wlsunset; wlsunset -t ${clamped} -T 6501 &`]);
+        }
     }
 
     function toggleWifi() {
@@ -108,14 +134,78 @@ Singleton {
             Quickshell.execDetached(["pkill", "-x", "wlsunset"]);
             root.nightLightActive = false;
         } else {
-            Quickshell.execDetached(["wlsunset", "-t", "4000", "-T", "6500"]);
+            Quickshell.execDetached(["sh", "-c", `wlsunset -t ${root.nightLightTemp} -T 6501 &`]);
             root.nightLightActive = true;
         }
         refreshTimer.restart();
     }
 
+    // Media action & read processes
+    Process { id: mediaActionProcess }
+
+    Process {
+        id: mediaReadProcess
+        command: ["playerctl", "metadata", "--format", "{{status}}|||{{title}}|||{{artist}}|||{{mpris:artUrl}}"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const line = text.trim();
+                    if (line.length > 0) {
+                        const parts = line.split("|||");
+                        root.osdTitle = parts[1] || "Reproducción";
+                        root.osdSubtitle = parts[2] || "MPRIS";
+                        root.osdArtUrl = parts[3] || "";
+                        root.triggerOsd("media", 0, root.osdIcon, 2500);
+                    }
+                } catch(e) {}
+            }
+        }
+    }
+
+    Timer {
+        id: mediaReadTimer
+        interval: 140
+        repeat: false
+        onTriggered: {
+            if (!mediaReadProcess.running) mediaReadProcess.running = true;
+        }
+    }
+
+    function triggerMediaAction(action) {
+        let sym = "play_arrow";
+        if (action === "play-pause") {
+            sym = "play_arrow";
+        } else if (action === "next") {
+            sym = "skip_next";
+        } else if (action === "previous") {
+            sym = "skip_previous";
+        }
+        root.osdIcon = sym;
+
+        mediaActionProcess.command = ["playerctl", action];
+        mediaActionProcess.running = true;
+        mediaReadTimer.restart();
+    }
+
     Process { id: volActionProcess }
     Process { id: brightActionProcess }
+
+    Component.onCompleted: {
+        loadNightLightProcess.running = true;
+    }
+
+    Process {
+        id: loadNightLightProcess
+        command: ["sh", "-c", "cat $HOME/.cache/sane-shell-nightlight.txt 2>/dev/null || echo 4000"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const val = parseInt(text.trim());
+                if (!isNaN(val) && val >= 2500 && val <= 6500) {
+                    root.nightLightTemp = val;
+                }
+            }
+        }
+    }
 
     // Refresh command combining fast shell reads
     Process {
@@ -131,7 +221,8 @@ Singleton {
             "nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2; echo '---'; " +
             "bluetoothctl show 2>/dev/null | grep -q 'Powered: yes' && echo '1' || echo '0'; echo '---'; " +
             "bluetoothctl devices Connected 2>/dev/null | head -n 1; echo '---'; " +
-            "pgrep -x wlsunset >/dev/null && echo '1' || echo '0'"
+            "pgrep -x wlsunset >/dev/null && echo '1' || echo '0'; echo '---'; " +
+            "playerctl metadata --format '{{status}}|||{{title}}|||{{artist}}|||{{mpris:artUrl}}' 2>/dev/null | head -n 1"
         ]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -182,12 +273,23 @@ Singleton {
                             }
                         }
 
-                        // 3. Audio
+                        // 3. Audio (with external change detection for OSD)
                         const audioLine = sections[3].trim();
-                        root.isMuted = audioLine.includes("[MUTED]");
+                        const newMuted = audioLine.includes("[MUTED]");
                         const volMatch = audioLine.match(/Volume:\s+([0-9.]+)/);
+                        const oldVol = root.volume;
+                        const oldMuted = root.isMuted;
+                        root.isMuted = newMuted;
                         if (volMatch) {
                             root.volume = Math.round(parseFloat(volMatch[1]) * 100);
+                        }
+
+                        if (root._audioInitialized) {
+                            if (oldVol !== root.volume || oldMuted !== root.isMuted) {
+                                root.triggerOsd("volume", root.volume, root.isMuted ? "volume_off" : (root.volume === 0 ? "volume_mute" : (root.volume < 50 ? "volume_down" : "volume_up")));
+                            }
+                        } else {
+                            root._audioInitialized = true;
                         }
 
                         // 4. Network
@@ -221,6 +323,27 @@ Singleton {
 
                         // 9. Night Light (wlsunset)
                         root.nightLightActive = (sections[9].trim() === "1");
+
+                        // 10. Auto-detect track change in background
+                        if (sections.length > 10) {
+                            const mediaLine = sections[10].trim();
+                            if (mediaLine.length > 0) {
+                                const mparts = mediaLine.split("|||");
+                                const mstatus = mparts[0] || "";
+                                const mtitle = mparts[1] || "";
+                                const martist = mparts[2] || "";
+                                const mart = mparts[3] || "";
+                                if (mtitle.length > 0 && mtitle !== root._prevMediaTitle && mstatus === "Playing") {
+                                    if (root._prevMediaTitle !== "") {
+                                        root.osdTitle = mtitle;
+                                        root.osdSubtitle = martist;
+                                        root.osdArtUrl = mart;
+                                        root.triggerOsd("media", 0, "music_note", 2500);
+                                    }
+                                    root._prevMediaTitle = mtitle;
+                                }
+                            }
+                        }
                     }
                 } catch(e) {}
             }

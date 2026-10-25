@@ -8,6 +8,7 @@ Singleton {
 
     property bool isDark: true
     property string activePopup: ""
+    property string activePopupScreen: "DVI-D-1"
 
     // ========================================================
     // MATERIAL DESIGN 3 OFFICIAL TOKENS (Catppuccin Mocha / Latte)
@@ -69,6 +70,11 @@ Singleton {
 
     function togglePopup(name) {
         activePopup = (activePopup === name) ? "" : name;
+    }
+
+    function togglePopupOn(name, screenName) {
+        activePopupScreen = screenName || "DVI-D-1";
+        togglePopup(name);
     }
 
     function closePopups() {

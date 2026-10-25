@@ -12,25 +12,38 @@ import Quickshell.Widgets
 StyledPopup {
     id: root
     popupId: "appdrawer"
-    keyboardFocus: WlrKeyboardFocus.OnDemand
+    keyboardFocus: shouldBeOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     popupY: 30
 
     onShouldBeOpenChanged: {
         if (shouldBeOpen) {
             appsProcess.running = true;
             drawerContent.resetSearch();
+            focusTimer.restart();
         }
     }
 
     contentItem: Rectangle {
         id: drawerContent
-        implicitWidth: 620
+        implicitWidth: Math.min(620, (root.screenTarget?.width ?? 1360) - 32)
         implicitHeight: 520
         radius: 28
         color: Theme.surface
         border.width: 1
         border.color: Theme.outline
 
+        Timer {
+            id: focusTimer
+            interval: 40
+            repeat: false
+            onTriggered: {
+                if (drawerContent.contentSearchInput) {
+                    drawerContent.contentSearchInput.forceActiveFocus();
+                }
+            }
+        }
+
+        property alias contentSearchInput: searchInput
         property var rawApps: []
         property int selectedIndex: 0
 
@@ -211,7 +224,7 @@ StyledPopup {
                 GridView {
                     id: appGrid
                     anchors.fill: parent
-                    cellWidth: 144
+                    cellWidth: Math.floor(appGrid.width / 4)
                     cellHeight: 104
                     model: filteredModel
 
@@ -226,7 +239,7 @@ StyledPopup {
                         required property bool terminal
                         required property int index
 
-                        width: 136
+                        width: Math.max(90, appGrid.cellWidth - 8)
                         height: 96
 
                         readonly property bool isSelected: drawerContent.selectedIndex === index

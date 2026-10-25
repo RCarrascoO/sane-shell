@@ -85,7 +85,7 @@ PanelWindow {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     hoverEnabled: true
-                    onClicked: Theme.togglePopup("appdrawer")
+                    onClicked: Theme.togglePopupOn("appdrawer", root.screenTarget?.name ?? "DVI-D-1")
                 }
             }
 

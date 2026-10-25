@@ -38,10 +38,14 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
 
-                QsMenuAnchor {
-                    id: menuAnchor
-                    menu: trayItemArea.modelData.menu
+                TrayMenuPopup {
+                    id: trayMenu
+                    menuHandle: trayItemArea.modelData.menu
+                    anchor.window: trayItemArea.QsWindow.window
                     anchor.item: trayItemArea
+                    anchor.gravity: Edges.Bottom
+                    anchor.edges: Edges.Bottom
+                    anchor.adjustment: PopupAdjustment.SlideX
                 }
 
                 onClicked: mouse => {
@@ -50,7 +54,11 @@ Rectangle {
                     } else if (mouse.button === Qt.MiddleButton) {
                         trayItemArea.modelData.secondaryActivate();
                     } else if (mouse.button === Qt.RightButton && trayItemArea.modelData.hasMenu) {
-                        menuAnchor.open();
+                        if (trayMenu.visible) {
+                            trayMenu.close();
+                        } else {
+                            trayMenu.open();
+                        }
                     }
                 }
 

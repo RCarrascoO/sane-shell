@@ -22,6 +22,10 @@ ShellRoot {
             Theme.togglePopup(name);
         }
 
+        function togglePopupOn(name: string, screenName: string) {
+            Theme.togglePopupOn(name, screenName);
+        }
+
         function closePopups() {
             Theme.closePopups();
         }
@@ -34,6 +38,10 @@ ShellRoot {
             SystemStats.setVolume(pct);
         }
 
+        function changeVolume(delta: int) {
+            SystemStats.changeVolume(delta);
+        }
+
         function toggleMute() {
             SystemStats.toggleMute();
         }
@@ -41,6 +49,24 @@ ShellRoot {
         function setBrightness(pct: int) {
             SystemStats.setBrightness(pct);
         }
+
+        function changeBrightness(delta: int) {
+            SystemStats.changeBrightness(delta);
+        }
+
+        function triggerMedia(action: string) {
+            SystemStats.triggerMediaAction(action);
+        }
+    }
+
+    function screenForName(name: string): var {
+        if (!Quickshell.screens || Quickshell.screens.length === 0) return null;
+        for (let i = 0; i < Quickshell.screens.length; i++) {
+            if (Quickshell.screens[i].name === name) {
+                return Quickshell.screens[i];
+            }
+        }
+        return Quickshell.screens[0];
     }
 
     Variants {
@@ -61,11 +87,16 @@ ShellRoot {
 
     AppDrawerPopup {
         id: appDrawer
-        screenTarget: (Quickshell.screens && Quickshell.screens.length > 0) ? Quickshell.screens[0] : null
+        screenTarget: root.screenForName(Theme.activePopupScreen)
     }
 
     WallpaperPopup {
         id: wallpaperPicker
-        screenTarget: (Quickshell.screens && Quickshell.screens.length > 0) ? Quickshell.screens[0] : null
+        screenTarget: root.screenForName(Theme.activePopupScreen)
+    }
+
+    DisplayPopup {
+        id: displayPopup
+        screenTarget: root.screenForName(Theme.activePopupScreen)
     }
 }

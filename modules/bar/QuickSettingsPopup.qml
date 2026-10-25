@@ -141,7 +141,7 @@ StyledPopup {
                     }
                 }
 
-                // Audio Mixer circular button
+                // Display / Night Light / Settings circular button
                 RippleButton {
                     implicitWidth: 36
                     implicitHeight: 36
@@ -149,8 +149,7 @@ StyledPopup {
                     colBackground: Theme.surfaceContainerHigh
                     colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
-                        Theme.activePopup = "";
-                        Quickshell.execDetached(["pavucontrol"]);
+                        Theme.togglePopupOn("displays", root.screenTarget?.name ?? "DVI-D-1");
                     }
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
@@ -473,7 +472,7 @@ StyledPopup {
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: tileNightLight.isActive ? "Cálido 4000K" : "Desactivada"
+                                text: tileNightLight.isActive ? `Cálido ${SystemStats.nightLightTemp}K` : "Desactivada"
                                 font {
                                     family: Appearance.font.family.main
                                     pixelSize: 10
@@ -485,11 +484,22 @@ StyledPopup {
                             }
                         }
 
-                        MaterialSymbol {
-                            visible: tileNightLight.isActive
-                            text: "check"
-                            iconSize: 16
-                            color: Theme.colOnPrimary
+                        // Subaction to open DisplayPopup
+                        RippleButton {
+                            implicitWidth: 28
+                            implicitHeight: 28
+                            buttonRadius: 14
+                            colBackground: "transparent"
+                            colBackgroundHover: Qt.rgba(1, 1, 1, 0.15)
+                            onClicked: {
+                                Theme.togglePopupOn("displays", root.screenTarget?.name ?? "DVI-D-1");
+                            }
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "tune"
+                                iconSize: 16
+                                color: tileNightLight.isActive ? Theme.colOnPrimary : Theme.colOnSurfaceVariant
+                            }
                         }
                     }
                 }

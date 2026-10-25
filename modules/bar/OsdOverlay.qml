@@ -25,14 +25,15 @@ PanelWindow {
         bottom: 48
     }
 
-    implicitWidth: 280
-    implicitHeight: 64
+    implicitWidth: SystemStats.osdType === "media" ? 360 : 280
+    implicitHeight: SystemStats.osdType === "media" ? 80 : 64
     color: "transparent"
 
     visible: SystemStats.osdVisible
 
-    // M3 Expressive Pill Card
+    // 1. NON-MEDIA OSD (Volume / Brightness)
     Rectangle {
+        visible: SystemStats.osdType !== "media"
         anchors.centerIn: parent
         width: 260
         height: 52
@@ -91,6 +92,99 @@ PanelWindow {
                     weight: Font.Bold
                 }
                 color: Theme.colOnSurface
+            }
+        }
+    }
+
+    // 2. MEDIA OSD (MPRIS with album art & track info)
+    Rectangle {
+        visible: SystemStats.osdType === "media"
+        anchors.centerIn: parent
+        width: 340
+        height: 68
+        radius: 24
+        color: Theme.surfaceContainerHighest
+        border.width: 1
+        border.color: Theme.outlineVariant
+
+        opacity: SystemStats.osdVisible ? 1.0 : 0.0
+        Behavior on opacity {
+            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            spacing: 10
+
+            // Album Art or Music Icon
+            Rectangle {
+                implicitWidth: 44
+                implicitHeight: 44
+                radius: 12
+                color: Theme.secondaryContainer
+                clip: true
+
+                Image {
+                    id: osdArtImg
+                    anchors.fill: parent
+                    source: (SystemStats.osdArtUrl && SystemStats.osdArtUrl.length > 8 && SystemStats.osdArtUrl !== "file:///") ? SystemStats.osdArtUrl : ""
+                    fillMode: Image.PreserveAspectCrop
+                    visible: status === Image.Ready
+                }
+
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    visible: !osdArtImg.visible
+                    text: "music_note"
+                    iconSize: 22
+                    color: Theme.colOnSecondaryContainer
+                }
+            }
+
+            // Track Title & Artist
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: SystemStats.osdTitle.length > 0 ? SystemStats.osdTitle : "Reproducción"
+                    font {
+                        family: Appearance.font.family.main
+                        pixelSize: 12
+                        weight: Font.Bold
+                    }
+                    color: Theme.colOnSurface
+                    elide: Text.ElideRight
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: SystemStats.osdSubtitle.length > 0 ? SystemStats.osdSubtitle : "PipeWire MPRIS"
+                    font {
+                        family: Appearance.font.family.main
+                        pixelSize: 10
+                    }
+                    color: Theme.colOnSurfaceVariant
+                    elide: Text.ElideRight
+                }
+            }
+
+            // Right squircle badge with action symbol
+            Rectangle {
+                implicitWidth: 36
+                implicitHeight: 36
+                radius: 12
+                color: Theme.primary
+
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    text: SystemStats.osdIcon
+                    iconSize: 20
+                    color: Theme.colOnPrimary
+                }
             }
         }
     }
