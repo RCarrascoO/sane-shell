@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>sane-deck • M3 Companion</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="manifest" href="/manifest.json?v=3">
+  <link rel="stylesheet" href="/style.css?v=3">
 </head>
 <body>
   <div class="deck-container">
@@ -27,15 +27,15 @@
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
           <span id="stat-phone">--%</span>
         </div>
-        <div class="m3-chip" id="chip-ram" title="Memoria RAM">
+        <div class="m3-chip" id="chip-ram" title="Memoria RAM Activa">
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M2 7h20v10H2V7zm2 2v6h16V9H4zm3 1h2v4H7v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4z"/></svg>
           <span id="stat-ram">-- GB</span>
         </div>
-        <div class="m3-chip" id="chip-cpu" title="Uso de CPU">
+        <div class="m3-chip" id="chip-cpu" title="Uso y Temperatura de CPU">
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M5 5h14v14H5V5zm2 2v10h10V7H7zm2-4h2v2H9V3zm4 0h2v2h-2V3zm-4 16h2v2H9v-2zm4 0h2v2h-2v-2zM1 9h2v2H1V9zm0 4h2v2H1v-2zm20-4h2v2h-2V9zm0 4h2v2h-2v-2z"/></svg>
           <span id="stat-cpu">--%</span>
         </div>
-        <div class="m3-chip" id="chip-gpu" title="Temperatura GPU">
+        <div class="m3-chip" id="chip-gpu" title="Temperatura GPU (Radeon)">
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           <span id="stat-gpu">--°C</span>
         </div>
@@ -118,10 +118,11 @@
           <button class="m3-ws-chip" data-focus="vesktop">💬 Vesktop</button>
           <button class="m3-ws-chip" data-focus="antigravity">✨ Antigravity</button>
           <button class="m3-ws-chip" data-focus="kitty">💻 Kitty</button>
+          <button class="m3-ws-chip" data-focus="obsidian">📓 Obsidian</button>
         </div>
       </section>
 
-      <!-- Section 4: System Actions & Hardware Deck -->
+      <!-- Section 4: System Actions & Desktop Controls -->
       <section class="m3-card actions-card">
         <div class="card-header">
           <div class="card-title-group">
@@ -158,32 +159,7 @@
         </div>
       </section>
 
-      <!-- Section 5: Huawei Companion 24/7 Controls (ADB) -->
-      <section class="m3-card phone-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <svg class="section-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
-            <h2 class="card-title">Huawei Companion (ADB)</h2>
-          </div>
-          <button class="m3-button phone-lock-btn" id="phone-screen-toggle" aria-label="Suspender Pantalla Celular">
-            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-            <span>Bloquear Pantalla</span>
-          </button>
-        </div>
-
-        <div class="slider-row">
-          <div class="slider-info">
-            <span class="slider-label">Brillo Pantalla del Teléfono</span>
-            <span class="slider-value" id="phone-brightness-val">50%</span>
-          </div>
-          <div class="m3-slider-container" id="phone-brightness-track">
-            <div class="m3-slider-fill" id="phone-brightness-fill" style="width: 50%;"></div>
-            <div class="m3-slider-thumb" id="phone-brightness-thumb" style="left: 50%;"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Section 6: Media Controller (playerctl) -->
+      <!-- Section 5: Media Controller (playerctl) -->
       <section class="m3-card media-card">
         <div class="media-info">
           <svg class="media-icon" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
@@ -207,6 +183,6 @@
     </main>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=3"></script>
 </body>
 </html>

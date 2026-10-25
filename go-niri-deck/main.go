@@ -32,15 +32,15 @@ var webFiles embed.FS
 type TelemetryState struct {
 	RAM        string `json:"ram"`
 	CPU        int    `json:"cpu"`
+	CPUTemp    int    `json:"cpu_temp"`
 	GPU        int    `json:"gpu"`
 	FocusedApp string `json:"focused_app"`
 }
 
 type PhoneState struct {
-	Battery    int  `json:"battery"`
-	Charging   bool `json:"charging"`
-	Brightness int  `json:"brightness"`
-	Connected  bool `json:"connected"`
+	Battery   int  `json:"battery"`
+	Charging  bool `json:"charging"`
+	Connected bool `json:"connected"`
 }
 
 type AudioStream struct {
@@ -251,6 +251,28 @@ func getRAMUsage() string {
 	return "-- GB"
 }
 
+func getCPUTemp() int {
+	matches, _ := filepath.Glob("/sys/class/hwmon/hwmon*/name")
+	for _, m := range matches {
+		data, err := os.ReadFile(m)
+		if err == nil {
+			name := strings.TrimSpace(string(data))
+			if name == "k10temp" || name == "coretemp" || name == "cpu_thermal" {
+				tempPath := filepath.Join(filepath.Dir(m), "temp1_input")
+				tempData, err := os.ReadFile(tempPath)
+				if err == nil {
+					val, _ := strconv.Atoi(strings.TrimSpace(string(tempData)))
+					if val > 1000 {
+						return val / 1000
+					}
+					return val
+				}
+			}
+		}
+	}
+	return 0
+}
+
 func getGPUTemp() int {
 	matches, _ := filepath.Glob("/sys/class/drm/card*/device/hwmon/hwmon*/temp1_input")
 	if len(matches) > 0 {
@@ -312,12 +334,12 @@ var (
 )
 
 func getPhoneState() PhoneState {
-	if time.Since(lastPhoneCheck) < 3*time.Second {
+	if time.Since(lastPhoneCheck) < 5*time.Second {
 		return cachedPhoneState
 	}
 	lastPhoneCheck = time.Now()
 
-	out, err := exec.Command("adb", "shell", "dumpsys battery | grep -E 'level|status'; settings get system screen_brightness").Output()
+	out, err := exec.Command("adb", "shell", "dumpsys battery | grep -E 'level|status'").Output()
 	if err != nil {
 		cachedPhoneState = PhoneState{Connected: false}
 		return cachedPhoneState
@@ -337,15 +359,8 @@ func getPhoneState() PhoneState {
 		} else if strings.HasPrefix(trimmed, "status:") {
 			parts := strings.Fields(trimmed)
 			if len(parts) >= 2 {
-				// status: 2 = charging, 5 = full
 				st, _ := strconv.Atoi(parts[1])
 				state.Charging = (st == 2 || st == 5)
-			}
-		} else if trimmed != "" && !strings.Contains(trimmed, ":") {
-			// Screen brightness number
-			br, err := strconv.Atoi(trimmed)
-			if err == nil {
-				state.Brightness = br
 			}
 		}
 	}
@@ -568,6 +583,7 @@ func collectFullState() FullState {
 		Telemetry: TelemetryState{
 			RAM:        getRAMUsage(),
 			CPU:        getCPUUsage(),
+			CPUTemp:    getCPUTemp(),
 			GPU:        getGPUTemp(),
 			FocusedApp: getFocusedApp(),
 		},
@@ -676,19 +692,6 @@ func handleClientCommand(msg ClientCommand) {
 		if msg.Action != "" {
 			_ = exec.Command("playerctl", msg.Action).Run()
 		}
-
-	case "set-phone-brightness":
-		brVal := int(msg.Volume)
-		if brVal < 5 {
-			brVal = 5
-		}
-		if brVal > 255 {
-			brVal = 255
-		}
-		_ = exec.Command("adb", "shell", "settings", "put", "system", "screen_brightness", strconv.Itoa(brVal)).Run()
-
-	case "toggle-phone-screen":
-		_ = exec.Command("adb", "shell", "input", "keyevent", "26").Run()
 	}
 }
 
@@ -751,13 +754,21 @@ func main() {
 		}
 	}()
 
-	// Sub-filesystem for embedded web static files
+	// Sub-filesystem for embedded web static files with no-cache headers
 	webSubFS, err := fs.Sub(webFiles, "web")
 	if err != nil {
 		log.Fatalf("Error inicializando embedded web assets: %v", err)
 	}
 
-	http.Handle("/", http.FileServer(http.FS(webSubFS)))
+	fileServer := http.FileServer(http.FS(webSubFS))
+	noCacheHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		fileServer.ServeHTTP(w, r)
+	})
+
+	http.Handle("/", noCacheHandler)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)

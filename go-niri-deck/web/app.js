@@ -1,5 +1,5 @@
 // ==========================================================================
-// sane-deck WebSocket Client & M3 Controller (Enhanced v2)
+// sane-deck WebSocket Client & M3 Controller (v3 Clean)
 // ==========================================================================
 
 (function() {
@@ -7,11 +7,10 @@
 
   let ws = null;
   let isDraggingMaster = false;
-  let isDraggingPhone = false;
   let draggingStreamName = null;
   let lastSliderSend = 0;
 
-  // DOM Elements
+  // DOM Elements (with defensive null checks)
   const connDot = document.getElementById('conn-dot');
   const btnFullscreen = document.getElementById('btn-fullscreen');
   const statPhone = document.getElementById('stat-phone');
@@ -35,12 +34,6 @@
   const workspacesDvi = document.getElementById('workspaces-dvi');
   const workspacesHdmi = document.getElementById('workspaces-hdmi');
 
-  const phoneBrightnessVal = document.getElementById('phone-brightness-val');
-  const phoneBrightnessTrack = document.getElementById('phone-brightness-track');
-  const phoneBrightnessFill = document.getElementById('phone-brightness-fill');
-  const phoneBrightnessThumb = document.getElementById('phone-brightness-thumb');
-  const phoneScreenToggle = document.getElementById('phone-screen-toggle');
-
   const mediaTitle = document.getElementById('media-title');
   const mediaStatus = document.getElementById('media-status');
   const playPauseIcon = document.getElementById('play-pause-icon');
@@ -59,13 +52,15 @@
   });
 
   // --- Fullscreen Toggle ---
-  btnFullscreen.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  });
+  if (btnFullscreen) {
+    btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+  }
 
   // --- WebSocket Connection ---
   function connect() {
@@ -75,11 +70,11 @@
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
-      connDot.classList.add('connected');
+      if (connDot) connDot.classList.add('connected');
     };
 
     ws.onclose = function() {
-      connDot.classList.remove('connected');
+      if (connDot) connDot.classList.remove('connected');
       setTimeout(connect, 1500); // Reconnect loop
     };
 
@@ -105,27 +100,35 @@
 
   // --- State Handler ---
   function handleServerUpdate(state) {
+    if (!state) return;
+
     // 1. Telemetry
     if (state.telemetry) {
-      if (state.telemetry.ram) statRam.textContent = state.telemetry.ram;
-      if (state.telemetry.cpu !== undefined) statCpu.textContent = `${state.telemetry.cpu}%`;
-      if (state.telemetry.gpu !== undefined && state.telemetry.gpu > 0) {
+      if (statRam && state.telemetry.ram) {
+        statRam.textContent = state.telemetry.ram;
+      }
+      if (statCpu && state.telemetry.cpu !== undefined) {
+        if (state.telemetry.cpu_temp) {
+          statCpu.textContent = `${state.telemetry.cpu}% (${state.telemetry.cpu_temp}°)`;
+        } else {
+          statCpu.textContent = `${state.telemetry.cpu}%`;
+        }
+      }
+      if (statGpu && state.telemetry.gpu !== undefined) {
         statGpu.textContent = `${state.telemetry.gpu}°C`;
       }
-      if (state.telemetry.focused_app) focusedAppTitle.textContent = state.telemetry.focused_app;
+      if (focusedAppTitle && state.telemetry.focused_app) {
+        focusedAppTitle.textContent = state.telemetry.focused_app;
+      }
     }
 
-    // 2. Phone Telemetry (ADB)
-    if (state.phone) {
-      if (state.phone.battery !== undefined) {
+    // 2. Phone Telemetry (Battery)
+    if (state.phone && statPhone) {
+      if (state.phone.battery !== undefined && state.phone.connected) {
         const bolt = state.phone.charging ? '⚡' : '';
         statPhone.textContent = `${state.phone.battery}%${bolt}`;
-      }
-      if (!isDraggingPhone && state.phone.brightness !== undefined) {
-        const pct = Math.round((state.phone.brightness / 255) * 100);
-        phoneBrightnessVal.textContent = `${pct}%`;
-        phoneBrightnessFill.style.width = `${pct}%`;
-        phoneBrightnessThumb.style.left = `${pct}%`;
+      } else {
+        statPhone.textContent = 'USB';
       }
     }
 
@@ -133,12 +136,12 @@
     if (state.audio) {
       if (!isDraggingMaster && state.audio.master_vol !== undefined) {
         const pct = Math.round(state.audio.master_vol * 100);
-        masterVolVal.textContent = `${pct}%`;
-        masterSliderFill.style.width = `${pct}%`;
-        masterSliderThumb.style.left = `${pct}%`;
+        if (masterVolVal) masterVolVal.textContent = `${pct}%`;
+        if (masterSliderFill) masterSliderFill.style.width = `${pct}%`;
+        if (masterSliderThumb) masterSliderThumb.style.left = `${pct}%`;
       }
 
-      if (state.audio.mic_muted !== undefined) {
+      if (state.audio.mic_muted !== undefined && micToggleBtn && micStatusLabel) {
         if (state.audio.mic_muted) {
           micToggleBtn.classList.add('muted');
           micStatusLabel.textContent = 'Muteado';
@@ -149,7 +152,7 @@
       }
 
       // Default sink indication
-      if (state.audio.default_sink) {
+      if (state.audio.default_sink && sinkAnalog && sinkHdmi) {
         if (state.audio.default_sink === '57') {
           sinkAnalog.classList.add('active');
           sinkHdmi.classList.remove('active');
@@ -165,18 +168,20 @@
 
     // 4. Workspaces (Pre-sorted by backend)
     if (state.workspaces) {
-      renderWorkspaces(workspacesDvi, state.workspaces.dvi || []);
-      renderWorkspaces(workspacesHdmi, state.workspaces.hdmi || []);
+      if (workspacesDvi) renderWorkspaces(workspacesDvi, state.workspaces.dvi || []);
+      if (workspacesHdmi) renderWorkspaces(workspacesHdmi, state.workspaces.hdmi || []);
     }
 
     // 5. Media
     if (state.media) {
-      mediaTitle.textContent = state.media.title || 'Sin reproducción activa';
-      mediaStatus.textContent = state.media.status || 'Inactivo';
-      if (state.media.status === 'Playing') {
-        playPauseIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; // Pause icon
-      } else {
-        playPauseIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; // Play icon
+      if (mediaTitle) mediaTitle.textContent = state.media.title || 'Sin reproducción activa';
+      if (mediaStatus) mediaStatus.textContent = state.media.status || 'Inactivo';
+      if (playPauseIcon) {
+        if (state.media.status === 'Playing') {
+          playPauseIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; // Pause icon
+        } else {
+          playPauseIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; // Play icon
+        }
       }
     }
   }
@@ -200,7 +205,7 @@
 
   // --- Audio Streams Renderer (Grouped by App Name) ---
   function renderStreams(streams) {
-    if (draggingStreamName !== null) return; // Don't redraw while user is dragging
+    if (draggingStreamName !== null || !streamsContainer) return;
     streamsContainer.innerHTML = '';
 
     streams.forEach(stream => {
@@ -236,7 +241,6 @@
       track.appendChild(fill);
       track.appendChild(thumb);
 
-      // Attach Touch / Drag to dynamic slider
       setupSliderEvents(track, fill, thumb, val, (newPct) => {
         sendCommand('set-stream-volume', { name: stream.name, volume: newPct / 100 });
       }, () => {
@@ -251,8 +255,10 @@
     });
   }
 
-  // --- Generic Slider Drag Logic ---
+  // --- Generic Slider Drag Logic with Safety Check ---
   function setupSliderEvents(track, fill, thumb, label, onUpdate, onStart, onEnd) {
+    if (!track || !fill || !thumb || !label) return;
+
     function handleMove(e) {
       const rect = track.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -311,29 +317,12 @@
     () => { isDraggingMaster = false; }
   );
 
-  // --- Initialize Phone Brightness Slider ---
-  setupSliderEvents(
-    phoneBrightnessTrack,
-    phoneBrightnessFill,
-    phoneBrightnessThumb,
-    phoneBrightnessVal,
-    (pct) => {
-      const rawVal = Math.round((pct / 100) * 255);
-      sendCommand('set-phone-brightness', { volume: rawVal });
-    },
-    () => { isDraggingPhone = true; },
-    () => { isDraggingPhone = false; }
-  );
-
-  // --- Phone Screen Lock / Power ---
-  phoneScreenToggle.addEventListener('click', () => {
-    sendCommand('toggle-phone-screen');
-  });
-
   // --- Mic Toggle ---
-  micToggleBtn.addEventListener('click', () => {
-    sendCommand('toggle-mic');
-  });
+  if (micToggleBtn) {
+    micToggleBtn.addEventListener('click', () => {
+      sendCommand('toggle-mic');
+    });
+  }
 
   // --- Audio Sink Switchers ---
   document.querySelectorAll('[data-sink]').forEach(btn => {
