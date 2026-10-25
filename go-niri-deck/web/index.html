@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>sane-deck • M3 Companion</title>
-  <link rel="manifest" href="/manifest.json?v=4">
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="manifest" href="/manifest.json?v=5">
+  <link rel="stylesheet" href="/style.css?v=5">
 </head>
 <body>
   <div class="deck-container">
@@ -18,6 +18,10 @@
       <div class="brand">
         <span class="status-dot" id="conn-dot"></span>
         <span class="brand-title">sane-deck</span>
+        <button class="m3-chip agy-chip" id="top-agy-chip" title="Antigravity Cuota">
+          <svg class="chip-icon agy-sparkle" viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+          <span id="top-agy-val">--%</span>
+        </button>
       </div>
       <div class="top-actions">
         <button class="icon-chip-btn" id="btn-fullscreen" title="Pantalla Completa">
@@ -98,6 +102,45 @@
             <div class="gauge-val" id="val-phone">--%</div>
             <div class="gauge-sub" id="sub-phone">Mate 20 • USB</div>
           </div>
+        </div>
+      </section>
+
+      <!-- Antigravity (Agy) AI Quota & Status Widget -->
+      <section class="m3-card agy-card" id="agy-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon agy-color" viewBox="0 0 24 24"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+            <h2 class="card-title">Google Antigravity</h2>
+          </div>
+          <span class="status-badge" id="agy-status-badge">Conectando...</span>
+        </div>
+
+        <div class="agy-task-box" id="agy-task-box">
+          <span class="agy-task-label">Tarea Activa:</span>
+          <span class="agy-task-text" id="agy-task-title">En espera</span>
+        </div>
+
+        <!-- Main Quota Linear Progress -->
+        <div class="agy-quota-main">
+          <div class="slider-info">
+            <span class="slider-label" id="agy-main-label">Límite 5h</span>
+            <span class="slider-value agy-color" id="agy-main-val">--%</span>
+          </div>
+          <div class="m3-linear-track">
+            <div class="m3-linear-fill" id="agy-main-fill" style="width: 0%;"></div>
+          </div>
+          <span class="agy-reset-sub" id="agy-main-reset">Reinicio en --</span>
+        </div>
+
+        <!-- Sub Buckets Grid -->
+        <div class="agy-buckets-grid" id="agy-buckets-container">
+          <!-- Dynamically populated (Weekly, Zen, Claude) -->
+        </div>
+
+        <!-- Actions -->
+        <div class="chips-row agy-actions">
+          <button class="m3-ws-chip active" data-focus="antigravity">✨ Enfocar Antigravity</button>
+          <button class="m3-ws-chip" id="btn-refresh-agy">🔄 Actualizar Cuota</button>
         </div>
       </section>
 
@@ -239,6 +282,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=4"></script>
+  <script src="/app.js?v=5"></script>
 </body>
 </html>

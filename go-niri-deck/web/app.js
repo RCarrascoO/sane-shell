@@ -1,5 +1,5 @@
 // ==========================================================================
-// sane-deck WebSocket Client & M3 Controller (Pixel Battery Edition v4)
+// sane-deck WebSocket Client & M3 Controller (Pixel + Agy v5)
 // ==========================================================================
 
 (function() {
@@ -15,6 +15,10 @@
   const connDot = document.getElementById('conn-dot');
   const btnFullscreen = document.getElementById('btn-fullscreen');
   const focusedAppTitle = document.getElementById('focused-app-title');
+
+  // Top Agy Chip
+  const topAgyChip = document.getElementById('top-agy-chip');
+  const topAgyVal = document.getElementById('top-agy-val');
 
   // Pixel Gauges
   const ringCpu = document.getElementById('ring-cpu');
@@ -33,6 +37,17 @@
   const valPhone = document.getElementById('val-phone');
   const subPhone = document.getElementById('sub-phone');
   const phoneCenterWrapper = document.getElementById('phone-center-wrapper');
+
+  // Antigravity (Agy) Elements
+  const agyCard = document.getElementById('agy-card');
+  const agyStatusBadge = document.getElementById('agy-status-badge');
+  const agyTaskTitle = document.getElementById('agy-task-title');
+  const agyMainLabel = document.getElementById('agy-main-label');
+  const agyMainVal = document.getElementById('agy-main-val');
+  const agyMainFill = document.getElementById('agy-main-fill');
+  const agyMainReset = document.getElementById('agy-main-reset');
+  const agyBucketsContainer = document.getElementById('agy-buckets-container');
+  const btnRefreshAgy = document.getElementById('btn-refresh-agy');
 
   // Audio & Mixer
   const masterVolVal = document.getElementById('master-vol-val');
@@ -85,6 +100,13 @@
       } else {
         document.exitFullscreen().catch(() => {});
       }
+    });
+  }
+
+  // --- Scroll to Agy card ---
+  if (topAgyChip && agyCard) {
+    topAgyChip.addEventListener('click', () => {
+      agyCard.scrollIntoView({ behavior: 'smooth' });
     });
   }
 
@@ -175,7 +197,39 @@
       }
     }
 
-    // 2. Audio Master, Sinks & Mic
+    // 2. Google Antigravity (Agy) Status & Quota
+    if (state.agy) {
+      const agyPct = state.agy.primaryPercentage || 100;
+      if (topAgyVal) topAgyVal.textContent = `${agyPct}%`;
+      if (topAgyChip) {
+        if (state.agy.busy) topAgyChip.classList.add('busy');
+        else topAgyChip.classList.remove('busy');
+      }
+
+      if (agyStatusBadge) {
+        if (state.agy.busy) {
+          agyStatusBadge.classList.add('busy');
+          agyStatusBadge.textContent = 'Ocupado ⚡';
+        } else {
+          agyStatusBadge.classList.remove('busy');
+          agyStatusBadge.textContent = 'Listo ✓';
+        }
+      }
+
+      if (agyTaskTitle) {
+        agyTaskTitle.textContent = state.agy.currentTask || 'En espera';
+      }
+
+      if (agyMainLabel) agyMainLabel.textContent = state.agy.primaryLabel || 'Límite 5h';
+      if (agyMainVal) agyMainVal.textContent = `${agyPct}%`;
+      if (agyMainFill) agyMainFill.style.width = `${agyPct}%`;
+      if (agyMainReset) agyMainReset.textContent = `Reinicio en ${state.agy.primaryResetIn || '--'}`;
+
+      // Render Sub-buckets
+      renderAgyBuckets(state.agy.groups || []);
+    }
+
+    // 3. Audio Master, Sinks & Mic
     if (state.audio) {
       if (!isDraggingMaster && state.audio.master_vol !== undefined) {
         const pct = Math.round(state.audio.master_vol * 100);
@@ -209,13 +263,13 @@
       renderStreams(state.audio.streams || []);
     }
 
-    // 3. Workspaces (Pre-sorted by backend)
+    // 4. Workspaces (Pre-sorted by backend)
     if (state.workspaces) {
       if (workspacesDvi) renderWorkspaces(workspacesDvi, state.workspaces.dvi || []);
       if (workspacesHdmi) renderWorkspaces(workspacesHdmi, state.workspaces.hdmi || []);
     }
 
-    // 4. Media
+    // 5. Media
     if (state.media) {
       if (mediaTitle) mediaTitle.textContent = state.media.title || 'Sin reproducción activa';
       if (mediaStatus) mediaStatus.textContent = state.media.status || 'Inactivo';
@@ -227,6 +281,53 @@
         }
       }
     }
+  }
+
+  // --- Render Agy Sub-Buckets ---
+  function renderAgyBuckets(groups) {
+    if (!agyBucketsContainer) return;
+    agyBucketsContainer.innerHTML = '';
+
+    groups.forEach(g => {
+      if (!g.buckets) return;
+      g.buckets.forEach(b => {
+        const card = document.createElement('div');
+        card.className = 'agy-bucket-card';
+
+        const header = document.createElement('div');
+        header.className = 'agy-bucket-header';
+
+        const nameSpan = document.createElement('span');
+        let shortName = b.displayName.replace(' Limit Remaining', '').replace(' Remaining', '');
+        if (g.displayName.includes('Zen')) shortName = 'Zen ' + shortName;
+        nameSpan.textContent = shortName;
+
+        const pctSpan = document.createElement('span');
+        pctSpan.className = 'agy-bucket-pct';
+        pctSpan.textContent = `${b.percentage}%`;
+
+        header.appendChild(nameSpan);
+        header.appendChild(pctSpan);
+
+        const bar = document.createElement('div');
+        bar.className = 'agy-bucket-bar';
+
+        const fill = document.createElement('div');
+        fill.className = 'agy-bucket-fill';
+        fill.style.width = `${b.percentage}%`;
+        bar.appendChild(fill);
+
+        const resetSpan = document.createElement('span');
+        resetSpan.className = 'agy-bucket-reset';
+        resetSpan.textContent = b.resetIn ? `Reset: ${b.resetIn}` : '';
+
+        card.appendChild(header);
+        card.appendChild(bar);
+        card.appendChild(resetSpan);
+
+        agyBucketsContainer.appendChild(card);
+      });
+    });
   }
 
   // --- Workspaces Renderer ---
@@ -364,6 +465,13 @@
   if (micToggleBtn) {
     micToggleBtn.addEventListener('click', () => {
       sendCommand('toggle-mic');
+    });
+  }
+
+  // --- Refresh Agy Quota ---
+  if (btnRefreshAgy) {
+    btnRefreshAgy.addEventListener('click', () => {
+      sendCommand('refresh-agy');
     });
   }
 

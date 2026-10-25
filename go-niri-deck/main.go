@@ -77,9 +77,36 @@ type MediaState struct {
 	Status string `json:"status"`
 }
 
+type AgyBucket struct {
+	BucketID    string  `json:"bucketId"`
+	DisplayName string  `json:"displayName"`
+	Percentage  int     `json:"percentage"`
+	Fraction    float64 `json:"fraction"`
+	ResetIn     string  `json:"resetIn"`
+}
+
+type AgyGroup struct {
+	DisplayName string      `json:"displayName"`
+	Description string      `json:"description"`
+	Buckets     []AgyBucket `json:"buckets"`
+}
+
+type AgyState struct {
+	Available         bool       `json:"available"`
+	Running           bool       `json:"running"`
+	Busy              bool       `json:"busy"`
+	CurrentTask       string     `json:"currentTask"`
+	PrimaryPercentage int        `json:"primaryPercentage"`
+	PrimaryFraction   float64    `json:"primaryFraction"`
+	PrimaryLabel      string     `json:"primaryLabel"`
+	PrimaryResetIn    string     `json:"primaryResetIn"`
+	Groups            []AgyGroup `json:"groups"`
+}
+
 type FullState struct {
 	Telemetry  TelemetryState  `json:"telemetry"`
 	Phone      PhoneState      `json:"phone"`
+	Agy        AgyState        `json:"agy"`
 	Audio      AudioState      `json:"audio"`
 	Workspaces WorkspacesState `json:"workspaces"`
 	Media      MediaState      `json:"media"`
@@ -549,6 +576,36 @@ func getWorkspaces() WorkspacesState {
 }
 
 // -------------------------------------------------------------
+// Antigravity (Agy) Quota & State Queries
+// -------------------------------------------------------------
+
+var (
+	cachedAgyState AgyState
+	lastAgyCheck   time.Time
+	agyMutex       sync.Mutex
+)
+
+func getAgyState(forceRefresh bool) AgyState {
+	agyMutex.Lock()
+	defer agyMutex.Unlock()
+
+	if !forceRefresh && time.Since(lastAgyCheck) < 8*time.Second && cachedAgyState.Available {
+		return cachedAgyState
+	}
+	lastAgyCheck = time.Now()
+
+	out, err := exec.Command("/home/sane/.local/bin/agy-tool", "quota").Output()
+	if err == nil {
+		var state AgyState
+		if json.Unmarshal(out, &state) == nil {
+			cachedAgyState = state
+			return state
+		}
+	}
+	return cachedAgyState
+}
+
+// -------------------------------------------------------------
 // Media State (playerctl)
 // -------------------------------------------------------------
 
@@ -591,7 +648,8 @@ func collectFullState() FullState {
 			GPU:        getGPUTemp(),
 			FocusedApp: getFocusedApp(),
 		},
-		Phone: getPhoneState(),
+		Phone:      getPhoneState(),
+		Agy:        getAgyState(false),
 		Audio: AudioState{
 			MasterVol:   masterVol,
 			MasterMuted: masterMuted,
@@ -676,6 +734,9 @@ func handleClientCommand(msg ClientCommand) {
 		if msg.Action != "" {
 			focusApp(msg.Action)
 		}
+
+	case "refresh-agy":
+		_ = getAgyState(true)
 
 	case "focus-workspace":
 		if msg.Output != "" {

@@ -104,7 +104,7 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .status-dot {
@@ -125,6 +125,33 @@ body {
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--md-sys-color-primary);
+}
+
+.agy-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  padding: 4px 10px;
+  border-radius: var(--md-shape-corner-full);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.agy-chip.busy {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-primary);
+  box-shadow: 0 0 10px rgba(180, 190, 254, 0.4);
+}
+
+.agy-sparkle {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
 }
 
 .icon-chip-btn {
@@ -260,6 +287,143 @@ body {
   color: var(--md-sys-color-on-surface-variant);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Google Antigravity (Agy) Card
+   ========================================================================== */
+
+.agy-card {
+  border-left: 4px solid var(--md-sys-color-primary);
+}
+
+.agy-color {
+  fill: var(--md-sys-color-primary);
+  color: var(--md-sys-color-primary);
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.status-badge.busy {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  animation: pulse-badge 1.8s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.agy-task-box {
+  background-color: var(--md-sys-color-surface-container-high);
+  padding: 8px 12px;
+  border-radius: var(--md-shape-corner-m);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agy-task-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--md-sys-color-outline);
+}
+
+.agy-task-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agy-quota-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.m3-linear-track {
+  width: 100%;
+  height: 12px;
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-shape-corner-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.m3-linear-fill {
+  height: 100%;
+  background-color: var(--md-sys-color-primary);
+  border-radius: var(--md-shape-corner-full);
+  transition: width 0.4s ease;
+}
+
+.agy-reset-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.agy-buckets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.agy-bucket-card {
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-corner-m);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agy-bucket-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.agy-bucket-pct {
+  color: var(--md-sys-color-primary);
+  font-weight: 700;
+}
+
+.agy-bucket-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-shape-corner-full);
+  overflow: hidden;
+}
+
+.agy-bucket-fill {
+  height: 100%;
+  background-color: var(--md-sys-color-secondary);
+  border-radius: var(--md-shape-corner-full);
+  transition: width 0.3s ease;
+}
+
+.agy-bucket-reset {
+  font-size: 9.5px;
+  color: var(--md-sys-color-outline);
 }
 
 /* ==========================================================================
