@@ -89,6 +89,8 @@ type ClientCommand struct {
 	Action string  `json:"action"`
 	ID     string  `json:"id"`
 	Name   string  `json:"name"`
+	Output string  `json:"output"`
+	Idx    int     `json:"idx"`
 	Volume float64 `json:"volume"`
 }
 
@@ -212,46 +214,67 @@ func getRAMUsage() string {
 	}
 	defer file.Close()
 
-	var totalKB, availKB uint64
+	var totalKB, anonKB, shmemKB, slabKB, sreclaimKB uint64
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "MemTotal:") {
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				totalKB, _ = strconv.ParseUint(parts[1], 10, 64)
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			val, _ := strconv.ParseUint(parts[1], 10, 64)
+			if strings.HasPrefix(line, "MemTotal:") {
+				totalKB = val
+			} else if strings.HasPrefix(line, "AnonPages:") {
+				anonKB = val
+			} else if strings.HasPrefix(line, "Shmem:") {
+				shmemKB = val
+			} else if strings.HasPrefix(line, "Slab:") {
+				slabKB = val
+			} else if strings.HasPrefix(line, "SReclaimable:") {
+				sreclaimKB = val
 			}
-		} else if strings.HasPrefix(line, "MemAvailable:") {
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				availKB, _ = strconv.ParseUint(parts[1], 10, 64)
-			}
-		}
-		if totalKB > 0 && availKB > 0 {
-			break
 		}
 	}
 
-	if totalKB > 0 && availKB > 0 && totalKB >= availKB {
-		usedGB := float64(totalKB-availKB) / (1024.0 * 1024.0)
+	if totalKB > 0 {
+		var activeSlab uint64
+		if slabKB > sreclaimKB {
+			activeSlab = slabKB - sreclaimKB
+		}
+		usedKB := anonKB + shmemKB + activeSlab
+		usedMB := usedKB / 1024
+		if usedMB < 1000 {
+			return fmt.Sprintf("%d MB", usedMB)
+		}
+		usedGB := float64(usedKB) / (1024.0 * 1024.0)
 		return fmt.Sprintf("%.1f GB", usedGB)
 	}
 	return "-- GB"
 }
 
 func getGPUTemp() int {
-	data, err := os.ReadFile("/sys/class/hwmon/hwmon1/temp1_input")
-	if err != nil {
-		matches, _ := filepath.Glob("/sys/class/drm/card0/device/hwmon/hwmon*/temp1_input")
-		if len(matches) > 0 {
-			data, err = os.ReadFile(matches[0])
+	matches, _ := filepath.Glob("/sys/class/drm/card*/device/hwmon/hwmon*/temp1_input")
+	if len(matches) > 0 {
+		data, err := os.ReadFile(matches[0])
+		if err == nil {
+			val, _ := strconv.Atoi(strings.TrimSpace(string(data)))
+			if val > 1000 {
+				return val / 1000
+			}
+			return val
 		}
 	}
-	if err == nil {
-		valStr := strings.TrimSpace(string(data))
-		val, parseErr := strconv.Atoi(valStr)
-		if parseErr == nil {
-			return val / 1000
+	// fallback hwmon search
+	hwMatches, _ := filepath.Glob("/sys/class/hwmon/hwmon*/temp1_input")
+	for _, m := range hwMatches {
+		data, err := os.ReadFile(m)
+		if err == nil {
+			val, _ := strconv.Atoi(strings.TrimSpace(string(data)))
+			if val > 1000 {
+				return val / 1000
+			}
+			if val > 0 {
+				return val
+			}
 		}
 	}
 	return 0
@@ -567,6 +590,40 @@ func collectFullState() FullState {
 
 var lastStreamsCache []AudioStream
 
+func focusApp(target string) {
+	out, err := exec.Command("niri", "msg", "-j", "windows").Output()
+	if err == nil {
+		var windows []struct {
+			ID    int    `json:"id"`
+			AppID string `json:"app_id"`
+			Title string `json:"title"`
+		}
+		if json.Unmarshal(out, &windows) == nil {
+			targetLower := strings.ToLower(target)
+			for _, w := range windows {
+				appLower := strings.ToLower(w.AppID)
+				titleLower := strings.ToLower(w.Title)
+				if strings.Contains(appLower, targetLower) || strings.Contains(titleLower, targetLower) {
+					_ = exec.Command("niri", "msg", "action", "focus-window", "--id", strconv.Itoa(w.ID)).Run()
+					return
+				}
+			}
+		}
+	}
+
+	// Fallback to launching the app if no window is currently open
+	switch strings.ToLower(target) {
+	case "zen":
+		_ = exec.Command("zen-browser").Start()
+	case "vesktop":
+		_ = exec.Command("vesktop").Start()
+	case "kitty":
+		_ = exec.Command("kitty").Start()
+	case "antigravity":
+		_ = exec.Command("antigravity").Start()
+	}
+}
+
 func handleClientCommand(msg ClientCommand) {
 	switch msg.Cmd {
 	case "set-master-volume":
@@ -597,8 +654,15 @@ func handleClientCommand(msg ClientCommand) {
 
 	case "focus-app":
 		if msg.Action != "" {
-			// Try agy-tool focus or spawn
-			_ = exec.Command("/home/sane/.local/bin/agy-tool", "focus", msg.Action).Run()
+			focusApp(msg.Action)
+		}
+
+	case "focus-workspace":
+		if msg.Output != "" {
+			_ = exec.Command("niri", "msg", "action", "focus-monitor", msg.Output).Run()
+		}
+		if msg.Idx > 0 {
+			_ = exec.Command("niri", "msg", "action", "focus-workspace", strconv.Itoa(msg.Idx)).Run()
 		}
 
 	case "niri-action":

@@ -15,6 +15,7 @@ Singleton {
     property alias ramUsedGb: root.ramUsedGB
 
     property int gpuTemp: 40
+    property bool deckActive: false
 
     // Audio & Display
     property int volume: 50
@@ -222,7 +223,8 @@ Singleton {
             "bluetoothctl show 2>/dev/null | grep -q 'Powered: yes' && echo '1' || echo '0'; echo '---'; " +
             "bluetoothctl devices Connected 2>/dev/null | head -n 1; echo '---'; " +
             "pgrep -x wlsunset >/dev/null && echo '1' || echo '0'; echo '---'; " +
-            "playerctl metadata --format '{{status}}|||{{title}}|||{{artist}}|||{{mpris:artUrl}}' 2>/dev/null | head -n 1"
+            "playerctl metadata --format '{{status}}|||{{title}}|||{{artist}}|||{{mpris:artUrl}}' 2>/dev/null | head -n 1; echo '---'; " +
+            "pgrep -x niri-deck >/dev/null && echo '1' || echo '0'"
         ]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -343,6 +345,11 @@ Singleton {
                                     root._prevMediaTitle = mtitle;
                                 }
                             }
+                        }
+
+                        // 11. niri-deck active companion
+                        if (sections.length > 11) {
+                            root.deckActive = (sections[11].trim() === "1");
                         }
                     }
                 } catch(e) {}

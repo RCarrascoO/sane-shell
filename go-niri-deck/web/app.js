@@ -109,7 +109,9 @@
     if (state.telemetry) {
       if (state.telemetry.ram) statRam.textContent = state.telemetry.ram;
       if (state.telemetry.cpu !== undefined) statCpu.textContent = `${state.telemetry.cpu}%`;
-      if (state.telemetry.gpu !== undefined) statGpu.textContent = `${state.telemetry.gpu}°C`;
+      if (state.telemetry.gpu !== undefined && state.telemetry.gpu > 0) {
+        statGpu.textContent = `${state.telemetry.gpu}°C`;
+      }
       if (state.telemetry.focused_app) focusedAppTitle.textContent = state.telemetry.focused_app;
     }
 
@@ -190,7 +192,7 @@
 
       chip.textContent = wsItem.idx;
       chip.onclick = () => {
-        sendCommand('niri-action', { action: `focus-workspace ${wsItem.idx}` });
+        sendCommand('focus-workspace', { output: wsItem.output, idx: wsItem.idx });
       };
       container.appendChild(chip);
     });

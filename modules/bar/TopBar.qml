@@ -136,7 +136,7 @@ PanelWindow {
 
                 TrayPill {
                     id: trayPill
-                    visible: SystemTray.items.values.length > 0
+                    visible: (SystemTray.items.values.length > 0) || SystemStats.deckActive
                 }
 
                 SystemPill {

@@ -1,0 +1,12 @@
+[Unit]
+Description=sane-deck Material 3 Companion Micro-Service
+After=graphical-session.target
+
+[Service]
+ExecStart=/home/sane/.local/bin/niri-deck
+Restart=always
+RestartSec=3
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/sane/.local/bin
+
+[Install]
+WantedBy=default.target

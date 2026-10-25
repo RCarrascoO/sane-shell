@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.services
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -10,7 +11,7 @@ import Quickshell.Widgets
 Rectangle {
     id: root
 
-    visible: SystemTray.items.values.length > 0
+    visible: (SystemTray.items.values.length > 0) || SystemStats.deckActive
     implicitHeight: 26
     implicitWidth: visible ? (trayRow.implicitWidth + 16) : 0
 
@@ -66,6 +67,26 @@ Rectangle {
                     anchors.fill: parent
                     source: trayItemArea.modelData.icon
                 }
+            }
+        }
+
+        // sane-deck Companion active indicator
+        MouseArea {
+            id: deckItemArea
+            visible: SystemStats.deckActive
+            implicitWidth: 16
+            implicitHeight: 16
+            cursorShape: Qt.PointingHandCursor
+
+            MaterialSymbol {
+                anchors.centerIn: parent
+                text: "developer_board"
+                iconSize: 16
+                color: Theme.primary
+            }
+
+            onClicked: {
+                Quickshell.execDetached(["zen-browser", "http://localhost:8080"]);
             }
         }
     }

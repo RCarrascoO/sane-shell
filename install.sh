@@ -44,4 +44,10 @@ cp "$SCRIPT_DIR/niri-configs/fuzzel/fuzzel.ini" "$HOME/.config/fuzzel/fuzzel.ini
 # 6. Sincronizar tema inicial
 "$SCRIPT_DIR/scripts/toggle-theme.sh" dark
 
+# 7. Configurar e iniciar servicio niri-deck
+mkdir -p "$HOME/.config/systemd/user"
+cp "$SCRIPT_DIR/go-niri-deck/niri-deck.service" "$HOME/.config/systemd/user/niri-deck.service"
+systemctl --user daemon-reload
+systemctl --user enable --now niri-deck.service 2>/dev/null || true
+
 echo "==> ¡sane-shell instalado y funcionando correctamente!"
