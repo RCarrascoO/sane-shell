@@ -1,0 +1,11 @@
+{
+  "name": "sane-deck",
+  "short_name": "sane-deck",
+  "start_url": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#11111b",
+  "theme_color": "#11111b",
+  "description": "Companion de escritorio M3 para Niri y PipeWire"
+}

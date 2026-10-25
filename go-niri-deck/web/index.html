@@ -2,11 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#11111b">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>sane-deck • M3 Companion</title>
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -16,19 +18,26 @@
       <div class="brand">
         <span class="status-dot" id="conn-dot"></span>
         <span class="brand-title">sane-deck</span>
+        <button class="icon-chip-btn" id="btn-fullscreen" title="Pantalla Completa">
+          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </button>
       </div>
       <div class="telemetry-chips">
-        <div class="m3-chip" id="chip-ram">
+        <div class="m3-chip" id="chip-phone" title="Batería del Teléfono (ADB)">
+          <svg class="chip-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+          <span id="stat-phone">--%</span>
+        </div>
+        <div class="m3-chip" id="chip-ram" title="Memoria RAM">
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M2 7h20v10H2V7zm2 2v6h16V9H4zm3 1h2v4H7v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4z"/></svg>
-          <span id="stat-ram">-- MB</span>
+          <span id="stat-ram">-- GB</span>
         </div>
-        <div class="m3-chip" id="chip-cpu">
+        <div class="m3-chip" id="chip-cpu" title="Uso de CPU">
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M5 5h14v14H5V5zm2 2v10h10V7H7zm2-4h2v2H9V3zm4 0h2v2h-2V3zm-4 16h2v2H9v-2zm4 0h2v2h-2v-2zM1 9h2v2H1V9zm0 4h2v2H1v-2zm20-4h2v2h-2V9zm0 4h2v2h-2v-2z"/></svg>
-          <span id="stat-cpu">-- %</span>
+          <span id="stat-cpu">--%</span>
         </div>
-        <div class="m3-chip" id="chip-gpu">
+        <div class="m3-chip" id="chip-gpu" title="Temperatura GPU">
           <svg class="chip-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-          <span id="stat-gpu">-- °C</span>
+          <span id="stat-gpu">--°C</span>
         </div>
       </div>
     </header>
@@ -44,14 +53,23 @@
           </div>
           <button class="m3-button mic-button" id="mic-toggle-btn" aria-label="Silenciar Micrófono">
             <svg id="mic-icon" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-            <span id="mic-status-label">Micrófono</span>
+            <span id="mic-status-label">Mic Activo</span>
           </button>
+        </div>
+
+        <!-- Audio Output (Sink) Switcher -->
+        <div class="sink-selector">
+          <span class="group-label">Salida de Audio Principal:</span>
+          <div class="chips-row" id="sinks-container">
+            <button class="m3-ws-chip active" id="sink-analog" data-sink="57">🎧 Audífonos (Ryzen HD)</button>
+            <button class="m3-ws-chip" id="sink-hdmi" data-sink="53">🔊 Pantalla (Ellesmere HDMI)</button>
+          </div>
         </div>
 
         <!-- Master Slider -->
         <div class="slider-row">
           <div class="slider-info">
-            <span class="slider-label">Master (Ryzen HD)</span>
+            <span class="slider-label">Volumen Maestro</span>
             <span class="slider-value" id="master-vol-val">70%</span>
           </div>
           <div class="m3-slider-container" id="master-slider-track">
@@ -60,9 +78,9 @@
           </div>
         </div>
 
-        <!-- Dynamic Streams Container -->
+        <!-- Dynamic Grouped Application Streams -->
         <div class="streams-list" id="streams-container">
-          <!-- Populated dynamically via JS (Zen, Vesktop, etc.) -->
+          <!-- Populated cleanly per-application (Zen, Vesktop, etc.) -->
         </div>
       </section>
 
@@ -87,12 +105,28 @@
         </div>
       </section>
 
-      <!-- Section 3: Quick Action Buttons -->
+      <!-- Section 3: Quick Focus & Apps -->
+      <section class="m3-card focus-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            <h2 class="card-title">Enfocar Aplicación</h2>
+          </div>
+        </div>
+        <div class="chips-row app-launchers">
+          <button class="m3-ws-chip" data-focus="zen">🌐 Zen Browser</button>
+          <button class="m3-ws-chip" data-focus="vesktop">💬 Vesktop</button>
+          <button class="m3-ws-chip" data-focus="antigravity">✨ Antigravity</button>
+          <button class="m3-ws-chip" data-focus="kitty">💻 Kitty</button>
+        </div>
+      </section>
+
+      <!-- Section 4: System Actions & Hardware Deck -->
       <section class="m3-card actions-card">
         <div class="card-header">
           <div class="card-title-group">
             <svg class="section-icon" viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
-            <h2 class="card-title">Atajos de Sistema</h2>
+            <h2 class="card-title">Atajos de Escritorio</h2>
           </div>
         </div>
 
@@ -124,7 +158,32 @@
         </div>
       </section>
 
-      <!-- Section 4: Media Controller (playerctl) -->
+      <!-- Section 5: Huawei Companion 24/7 Controls (ADB) -->
+      <section class="m3-card phone-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <svg class="section-icon" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+            <h2 class="card-title">Huawei Companion (ADB)</h2>
+          </div>
+          <button class="m3-button phone-lock-btn" id="phone-screen-toggle" aria-label="Suspender Pantalla Celular">
+            <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <span>Bloquear Pantalla</span>
+          </button>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-info">
+            <span class="slider-label">Brillo Pantalla del Teléfono</span>
+            <span class="slider-value" id="phone-brightness-val">50%</span>
+          </div>
+          <div class="m3-slider-container" id="phone-brightness-track">
+            <div class="m3-slider-fill" id="phone-brightness-fill" style="width: 50%;"></div>
+            <div class="m3-slider-thumb" id="phone-brightness-thumb" style="left: 50%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: Media Controller (playerctl) -->
       <section class="m3-card media-card">
         <div class="media-info">
           <svg class="media-icon" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>

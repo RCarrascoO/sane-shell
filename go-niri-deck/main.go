@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,17 +36,25 @@ type TelemetryState struct {
 	FocusedApp string `json:"focused_app"`
 }
 
+type PhoneState struct {
+	Battery    int  `json:"battery"`
+	Charging   bool `json:"charging"`
+	Brightness int  `json:"brightness"`
+	Connected  bool `json:"connected"`
+}
+
 type AudioStream struct {
-	ID     string  `json:"id"`
-	Name   string  `json:"name"`
-	Volume float64 `json:"volume"`
-	Muted  bool    `json:"muted"`
+	Name   string   `json:"name"`
+	IDs    []string `json:"ids"`
+	Volume float64  `json:"volume"`
+	Muted  bool     `json:"muted"`
 }
 
 type AudioState struct {
 	MasterVol   float64       `json:"master_vol"`
 	MasterMuted bool          `json:"master_muted"`
 	MicMuted    bool          `json:"mic_muted"`
+	DefaultSink string        `json:"default_sink"`
 	Streams     []AudioStream `json:"streams"`
 }
 
@@ -69,6 +78,7 @@ type MediaState struct {
 
 type FullState struct {
 	Telemetry  TelemetryState  `json:"telemetry"`
+	Phone      PhoneState      `json:"phone"`
 	Audio      AudioState      `json:"audio"`
 	Workspaces WorkspacesState `json:"workspaces"`
 	Media      MediaState      `json:"media"`
@@ -78,6 +88,7 @@ type ClientCommand struct {
 	Cmd    string  `json:"cmd"`
 	Action string  `json:"action"`
 	ID     string  `json:"id"`
+	Name   string  `json:"name"`
 	Volume float64 `json:"volume"`
 }
 
@@ -182,7 +193,7 @@ func getCPUUsage() int {
 func getRAMUsage() string {
 	file, err := os.Open("/proc/meminfo")
 	if err != nil {
-		return "-- MB"
+		return "-- GB"
 	}
 	defer file.Close()
 
@@ -207,16 +218,15 @@ func getRAMUsage() string {
 	}
 
 	if totalKB > 0 && availKB > 0 && totalKB >= availKB {
-		usedMB := (totalKB - availKB) / 1024
-		return fmt.Sprintf("%d MB", usedMB)
+		usedGB := float64(totalKB-availKB) / (1024.0 * 1024.0)
+		return fmt.Sprintf("%.1f GB", usedGB)
 	}
-	return "-- MB"
+	return "-- GB"
 }
 
 func getGPUTemp() int {
 	data, err := os.ReadFile("/sys/class/hwmon/hwmon1/temp1_input")
 	if err != nil {
-		// Try fallback card0 path
 		matches, _ := filepath.Glob("/sys/class/drm/card0/device/hwmon/hwmon*/temp1_input")
 		if len(matches) > 0 {
 			data, err = os.ReadFile(matches[0])
@@ -255,7 +265,59 @@ func getFocusedApp() string {
 }
 
 // -------------------------------------------------------------
-// Audio Queries (wpctl)
+// Phone Integration Queries (via ADB)
+// -------------------------------------------------------------
+
+var (
+	cachedPhoneState PhoneState
+	lastPhoneCheck   time.Time
+)
+
+func getPhoneState() PhoneState {
+	if time.Since(lastPhoneCheck) < 3*time.Second {
+		return cachedPhoneState
+	}
+	lastPhoneCheck = time.Now()
+
+	out, err := exec.Command("adb", "shell", "dumpsys battery | grep -E 'level|status'; settings get system screen_brightness").Output()
+	if err != nil {
+		cachedPhoneState = PhoneState{Connected: false}
+		return cachedPhoneState
+	}
+
+	lines := strings.Split(string(out), "\n")
+	state := PhoneState{Connected: true}
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "level:") {
+			parts := strings.Fields(trimmed)
+			if len(parts) >= 2 {
+				lvl, _ := strconv.Atoi(parts[1])
+				state.Battery = lvl
+			}
+		} else if strings.HasPrefix(trimmed, "status:") {
+			parts := strings.Fields(trimmed)
+			if len(parts) >= 2 {
+				// status: 2 = charging, 5 = full
+				st, _ := strconv.Atoi(parts[1])
+				state.Charging = (st == 2 || st == 5)
+			}
+		} else if trimmed != "" && !strings.Contains(trimmed, ":") {
+			// Screen brightness number
+			br, err := strconv.Atoi(trimmed)
+			if err == nil {
+				state.Brightness = br
+			}
+		}
+	}
+
+	cachedPhoneState = state
+	return state
+}
+
+// -------------------------------------------------------------
+// Audio Queries (PipeWire / pw-dump / wpctl)
 // -------------------------------------------------------------
 
 func parseWPVolume(target string) (float64, bool) {
@@ -276,61 +338,113 @@ func parseWPVolume(target string) (float64, bool) {
 	return 0.0, isMuted
 }
 
-func getAudioStreams() []AudioStream {
+func getDefaultSink() string {
 	cmd := exec.Command("wpctl", "status")
 	out, err := cmd.Output()
+	if err != nil {
+		return "57"
+	}
+	lines := strings.Split(string(out), "\n")
+	inSinks := false
+	for _, line := range lines {
+		if strings.Contains(line, "Sinks:") {
+			inSinks = true
+			continue
+		}
+		if inSinks {
+			if strings.Contains(line, "Sources:") {
+				break
+			}
+			if strings.Contains(line, "*") {
+				re := regexp.MustCompile(`\*\s+(\d+)\.`)
+				m := re.FindStringSubmatch(line)
+				if len(m) >= 2 {
+					return m[1]
+				}
+			}
+		}
+	}
+	return "57"
+}
+
+// Clean and aggregate real applications using pw-dump
+func getAudioStreamsClean() []AudioStream {
+	out, err := exec.Command("pw-dump").Output()
 	if err != nil {
 		return nil
 	}
 
-	var streams []AudioStream
-	lines := strings.Split(string(out), "\n")
-	inStreams := false
+	var rawItems []struct {
+		ID   int `json:"id"`
+		Info struct {
+			Props map[string]interface{} `json:"props"`
+		} `json:"info"`
+	}
 
-	streamRegex := regexp.MustCompile(`^\s+(\d+)\.\s+([^\s].*)$`)
+	if err := json.Unmarshal(out, &rawItems); err != nil {
+		return nil
+	}
 
-	for _, line := range lines {
-		if strings.Contains(line, "Streams:") {
-			inStreams = true
+	apps := make(map[string]*AudioStream)
+
+	for _, item := range rawItems {
+		props := item.Info.Props
+		if props == nil {
 			continue
 		}
-		if inStreams {
-			if strings.TrimSpace(line) == "" || (!strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") && !strings.Contains(line, "├") && !strings.Contains(line, "└")) {
-				inStreams = false
-				break
-			}
-			// Skip sub-routing lines (like "155. output_FR > ...")
-			if strings.Contains(line, ">") {
-				continue
-			}
 
-			matches := streamRegex.FindStringSubmatch(line)
-			if len(matches) >= 3 {
-				id := matches[1]
-				name := strings.TrimSpace(matches[2])
-				// Clean name
-				if idx := strings.Index(name, "["); idx != -1 {
-					name = strings.TrimSpace(name[:idx])
-				}
-				if name == "speech-dispatcher-dummy" {
-					continue
-				}
+		mediaClass, _ := props["media.class"].(string)
+		if mediaClass != "Stream/Output/Audio" {
+			continue
+		}
 
-				vol, muted := parseWPVolume(id)
-				streams = append(streams, AudioStream{
-					ID:     id,
-					Name:   name,
-					Volume: vol,
-					Muted:  muted,
-				})
+		appName, _ := props["application.name"].(string)
+		if appName == "" {
+			appName, _ = props["node.name"].(string)
+		}
+
+		// Filter system/virtual artifacts
+		if appName == "" ||
+			appName == "speech-dispatcher-dummy" ||
+			appName == "Easy Effects Source" ||
+			strings.HasPrefix(appName, "monitor_") ||
+			strings.HasPrefix(appName, "input_") ||
+			strings.Contains(appName, "Easy Effects") {
+			continue
+		}
+
+		nodeID := strconv.Itoa(item.ID)
+
+		if existing, ok := apps[appName]; ok {
+			existing.IDs = append(existing.IDs, nodeID)
+		} else {
+			apps[appName] = &AudioStream{
+				Name: appName,
+				IDs:  []string{nodeID},
 			}
 		}
 	}
-	return streams
+
+	var result []AudioStream
+	for _, stream := range apps {
+		if len(stream.IDs) > 0 {
+			vol, muted := parseWPVolume(stream.IDs[0])
+			stream.Volume = vol
+			stream.Muted = muted
+		}
+		result = append(result, *stream)
+	}
+
+	// Sort streams alphabetically for UI stability
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+
+	return result
 }
 
 // -------------------------------------------------------------
-// Workspaces (Niri IPC)
+// Workspaces (Niri IPC - Ordered Ascending)
 // -------------------------------------------------------------
 
 func getWorkspaces() WorkspacesState {
@@ -367,6 +481,15 @@ func getWorkspaces() WorkspacesState {
 			state.HDMI = append(state.HDMI, item)
 		}
 	}
+
+	// Fix: Sort ascending by Idx so 1, 2, 3 are in natural order
+	sort.Slice(state.DVI, func(i, j int) bool {
+		return state.DVI[i].Idx < state.DVI[j].Idx
+	})
+	sort.Slice(state.HDMI, func(i, j int) bool {
+		return state.HDMI[i].Idx < state.HDMI[j].Idx
+	})
+
 	return state
 }
 
@@ -410,11 +533,13 @@ func collectFullState() FullState {
 			GPU:        getGPUTemp(),
 			FocusedApp: getFocusedApp(),
 		},
+		Phone: getPhoneState(),
 		Audio: AudioState{
 			MasterVol:   masterVol,
 			MasterMuted: masterMuted,
 			MicMuted:    micMuted,
-			Streams:     getAudioStreams(),
+			DefaultSink: getDefaultSink(),
+			Streams:     getAudioStreamsClean(),
 		},
 		Workspaces: getWorkspaces(),
 		Media:      getMediaState(),
@@ -425,33 +550,71 @@ func collectFullState() FullState {
 // Action Handlers
 // -------------------------------------------------------------
 
+var lastStreamsCache []AudioStream
+
 func handleClientCommand(msg ClientCommand) {
 	switch msg.Cmd {
 	case "set-master-volume":
 		volStr := fmt.Sprintf("%.2f", msg.Volume)
 		_ = exec.Command("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", volStr).Run()
+
 	case "toggle-mic":
 		_ = exec.Command("wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle").Run()
-	case "set-stream-volume":
+
+	case "set-default-sink":
 		if msg.ID != "" {
-			volStr := fmt.Sprintf("%.2f", msg.Volume)
-			_ = exec.Command("wpctl", "set-volume", msg.ID, volStr).Run()
+			_ = exec.Command("wpctl", "set-default", msg.ID).Run()
 		}
+
+	case "set-stream-volume":
+		volStr := fmt.Sprintf("%.2f", msg.Volume)
+		if msg.Name != "" {
+			// Find all IDs associated with this application name
+			for _, s := range lastStreamsCache {
+				if s.Name == msg.Name {
+					for _, id := range s.IDs {
+						_ = exec.Command("wpctl", "set-volume", id, volStr).Run()
+					}
+					break
+				}
+			}
+		}
+
+	case "focus-app":
+		if msg.Action != "" {
+			// Try agy-tool focus or spawn
+			_ = exec.Command("/home/sane/.local/bin/agy-tool", "focus", msg.Action).Run()
+		}
+
 	case "niri-action":
 		if msg.Action != "" {
 			parts := strings.Fields(msg.Action)
 			args := append([]string{"msg", "action"}, parts...)
 			_ = exec.Command("niri", args...).Run()
 		}
+
 	case "media-action":
 		if msg.Action != "" {
 			_ = exec.Command("playerctl", msg.Action).Run()
 		}
+
+	case "set-phone-brightness":
+		brVal := int(msg.Volume)
+		if brVal < 5 {
+			brVal = 5
+		}
+		if brVal > 255 {
+			brVal = 255
+		}
+		_ = exec.Command("adb", "shell", "settings", "put", "system", "screen_brightness", strconv.Itoa(brVal)).Run()
+
+	case "toggle-phone-screen":
+		_ = exec.Command("adb", "shell", "input", "keyevent", "26").Run()
 	}
 }
 
 // -------------------------------------------------------------
-// ADB Auto-Reverse Tunnel Daemon
+// ADB Auto-Reverse Tunnel & Immersive Policy Daemon
 // -------------------------------------------------------------
 
 func startADBWatcher(port int) {
@@ -461,10 +624,14 @@ func startADBWatcher(port int) {
 		for {
 			out, err := exec.Command("adb", "devices").Output()
 			if err == nil && strings.Contains(string(out), "\tdevice") {
-				// Phone is connected with ADB authorized, setup reverse tunnel
+				// Reverse tunnel
 				_ = exec.Command("adb", "reverse", reverseArg, reverseArg).Run()
+				// Automatically enforce Android edge-to-edge immersive mode
+				_ = exec.Command("adb", "shell", "settings put global policy_control immersive.full=*").Run()
+				// Ensure screen stays on while connected to USB
+				_ = exec.Command("adb", "shell", "settings put global stay_on_while_plugged_in 7").Run()
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(6 * time.Second)
 		}
 	}()
 }
@@ -478,17 +645,17 @@ func main() {
 	noADB := flag.Bool("no-adb", false, "Disable automatic ADB reverse tunnel")
 	flag.Parse()
 
-	log.Printf("🚀 Iniciando sane-deck (Material Design 3) en :%d", *port)
+	log.Printf("🚀 Iniciando sane-deck v2 (Material Design 3) en :%d", *port)
 
 	if !*noADB {
 		startADBWatcher(*port)
-		log.Printf("🔌 Watcher ADB activo: conectará automáticamente el puerto %d vía USB-C", *port)
+		log.Printf("🔌 Watcher ADB activo: puerto %d + modo inmersivo activado", *port)
 	}
 
 	hub := newHub()
 	go hub.run()
 
-	// Ticker to broadcast state every 400ms to all connected clients
+	// Broadcast state every 400ms to all connected clients
 	go func() {
 		ticker := time.NewTicker(400 * time.Millisecond)
 		defer ticker.Stop()
@@ -497,6 +664,7 @@ func main() {
 				continue
 			}
 			state := collectFullState()
+			lastStreamsCache = state.Audio.Streams
 			payload, err := json.Marshal(state)
 			if err == nil {
 				hub.broadcast <- payload
@@ -520,8 +688,9 @@ func main() {
 		}
 		hub.register <- conn
 
-		// Send initial state immediately
+		// Initial state
 		initialState := collectFullState()
+		lastStreamsCache = initialState.Audio.Streams
 		if payload, err := json.Marshal(initialState); err == nil {
 			_ = conn.WriteMessage(websocket.TextMessage, payload)
 		}
@@ -538,8 +707,9 @@ func main() {
 				var cmd ClientCommand
 				if jsonErr := json.Unmarshal(message, &cmd); jsonErr == nil {
 					handleClientCommand(cmd)
-					// Trigger rapid refresh
+					// Quick refresh
 					quickState := collectFullState()
+					lastStreamsCache = quickState.Audio.Streams
 					if quickPayload, err := json.Marshal(quickState); err == nil {
 						hub.broadcast <- quickPayload
 					}

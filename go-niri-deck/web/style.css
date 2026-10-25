@@ -71,7 +71,7 @@ body {
   background-color: var(--md-sys-color-surface-dim);
   color: var(--md-sys-color-on-surface);
   min-height: 100vh;
-  padding: 12px;
+  padding: env(safe-area-inset-top, 12px) env(safe-area-inset-right, 12px) env(safe-area-inset-bottom, 12px) env(safe-area-inset-left, 12px);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -96,15 +96,17 @@ body {
   justify-content: space-between;
   align-items: center;
   background-color: var(--md-sys-color-surface-container-low);
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: var(--md-shape-corner-full);
   border: 1px solid var(--md-sys-color-outline-variant);
+  gap: 8px;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .status-dot {
@@ -127,27 +129,78 @@ body {
   color: var(--md-sys-color-primary);
 }
 
+.icon-chip-btn {
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.icon-chip-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.icon-chip-btn:active {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-primary);
+}
+
 .telemetry-chips {
   display: flex;
   gap: 6px;
+  flex-wrap: nowrap;
 }
 
+/* Tabular, fixed-size chips to prevent layout jumps */
 .m3-chip {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   background-color: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface-variant);
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: var(--md-shape-corner-full);
   font-size: 11px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 54px;
+}
+
+#chip-phone {
+  min-width: 58px;
+  color: var(--md-sys-color-secondary);
+}
+
+#chip-ram {
+  min-width: 68px;
+}
+
+#chip-cpu {
+  min-width: 52px;
+}
+
+#chip-gpu {
+  min-width: 54px;
 }
 
 .chip-icon {
   width: 12px;
   height: 12px;
   fill: currentColor;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -198,7 +251,7 @@ body {
    Audio Mixer & Sliders (M3 Expressive)
    ========================================================================== */
 
-.mic-button {
+.mic-button, .phone-lock-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -213,7 +266,7 @@ body {
   transition: all 0.2s ease;
 }
 
-.mic-button svg {
+.mic-button svg, .phone-lock-btn svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
@@ -225,8 +278,14 @@ body {
   box-shadow: 0 0 10px rgba(243, 139, 168, 0.4);
 }
 
-.mic-button:active {
+.mic-button:active, .phone-lock-btn:active {
   transform: scale(0.96);
+}
+
+.sink-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .slider-row {
@@ -245,6 +304,7 @@ body {
 
 .slider-value {
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: var(--md-sys-color-primary);
 }
 
@@ -432,7 +492,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 260px;
+  max-width: 240px;
 }
 
 .media-status {

@@ -1,5 +1,5 @@
 // ==========================================================================
-// sane-deck WebSocket Client & M3 Controller
+// sane-deck WebSocket Client & M3 Controller (Enhanced v2)
 // ==========================================================================
 
 (function() {
@@ -7,11 +7,14 @@
 
   let ws = null;
   let isDraggingMaster = false;
-  let draggingStreamId = null;
+  let isDraggingPhone = false;
+  let draggingStreamName = null;
   let lastSliderSend = 0;
 
   // DOM Elements
   const connDot = document.getElementById('conn-dot');
+  const btnFullscreen = document.getElementById('btn-fullscreen');
+  const statPhone = document.getElementById('stat-phone');
   const statRam = document.getElementById('stat-ram');
   const statCpu = document.getElementById('stat-cpu');
   const statGpu = document.getElementById('stat-gpu');
@@ -26,12 +29,43 @@
   const micStatusLabel = document.getElementById('mic-status-label');
   const streamsContainer = document.getElementById('streams-container');
 
+  const sinkAnalog = document.getElementById('sink-analog');
+  const sinkHdmi = document.getElementById('sink-hdmi');
+
   const workspacesDvi = document.getElementById('workspaces-dvi');
   const workspacesHdmi = document.getElementById('workspaces-hdmi');
+
+  const phoneBrightnessVal = document.getElementById('phone-brightness-val');
+  const phoneBrightnessTrack = document.getElementById('phone-brightness-track');
+  const phoneBrightnessFill = document.getElementById('phone-brightness-fill');
+  const phoneBrightnessThumb = document.getElementById('phone-brightness-thumb');
+  const phoneScreenToggle = document.getElementById('phone-screen-toggle');
 
   const mediaTitle = document.getElementById('media-title');
   const mediaStatus = document.getElementById('media-status');
   const playPauseIcon = document.getElementById('play-pause-icon');
+
+  // --- Screen Wake Lock ---
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        await navigator.wakeLock.request('screen');
+      }
+    } catch (_) {}
+  }
+  requestWakeLock();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
+
+  // --- Fullscreen Toggle ---
+  btnFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
 
   // --- WebSocket Connection ---
   function connect() {
@@ -79,7 +113,21 @@
       if (state.telemetry.focused_app) focusedAppTitle.textContent = state.telemetry.focused_app;
     }
 
-    // 2. Audio Master & Mic
+    // 2. Phone Telemetry (ADB)
+    if (state.phone) {
+      if (state.phone.battery !== undefined) {
+        const bolt = state.phone.charging ? '⚡' : '';
+        statPhone.textContent = `${state.phone.battery}%${bolt}`;
+      }
+      if (!isDraggingPhone && state.phone.brightness !== undefined) {
+        const pct = Math.round((state.phone.brightness / 255) * 100);
+        phoneBrightnessVal.textContent = `${pct}%`;
+        phoneBrightnessFill.style.width = `${pct}%`;
+        phoneBrightnessThumb.style.left = `${pct}%`;
+      }
+    }
+
+    // 3. Audio Master, Sinks & Mic
     if (state.audio) {
       if (!isDraggingMaster && state.audio.master_vol !== undefined) {
         const pct = Math.round(state.audio.master_vol * 100);
@@ -98,17 +146,28 @@
         }
       }
 
-      // Dynamic Streams
+      // Default sink indication
+      if (state.audio.default_sink) {
+        if (state.audio.default_sink === '57') {
+          sinkAnalog.classList.add('active');
+          sinkHdmi.classList.remove('active');
+        } else if (state.audio.default_sink === '53') {
+          sinkHdmi.classList.add('active');
+          sinkAnalog.classList.remove('active');
+        }
+      }
+
+      // Grouped Dynamic Streams
       renderStreams(state.audio.streams || []);
     }
 
-    // 3. Workspaces
+    // 4. Workspaces (Pre-sorted by backend)
     if (state.workspaces) {
       renderWorkspaces(workspacesDvi, state.workspaces.dvi || []);
       renderWorkspaces(workspacesHdmi, state.workspaces.hdmi || []);
     }
 
-    // 4. Media
+    // 5. Media
     if (state.media) {
       mediaTitle.textContent = state.media.title || 'Sin reproducción activa';
       mediaStatus.textContent = state.media.status || 'Inactivo';
@@ -137,9 +196,9 @@
     });
   }
 
-  // --- Audio Streams Renderer ---
+  // --- Audio Streams Renderer (Grouped by App Name) ---
   function renderStreams(streams) {
-    if (draggingStreamId !== null) return; // Don't redraw while user is dragging
+    if (draggingStreamName !== null) return; // Don't redraw while user is dragging
     streamsContainer.innerHTML = '';
 
     streams.forEach(stream => {
@@ -177,11 +236,11 @@
 
       // Attach Touch / Drag to dynamic slider
       setupSliderEvents(track, fill, thumb, val, (newPct) => {
-        sendCommand('set-stream-volume', { id: stream.id, volume: newPct / 100 });
+        sendCommand('set-stream-volume', { name: stream.name, volume: newPct / 100 });
       }, () => {
-        draggingStreamId = stream.id;
+        draggingStreamName = stream.name;
       }, () => {
-        draggingStreamId = null;
+        draggingStreamName = null;
       });
 
       row.appendChild(info);
@@ -204,7 +263,7 @@
       label.textContent = `${pct}%`;
 
       const now = Date.now();
-      if (now - lastSliderSend > 35) { // 35ms throttle (~30 fps)
+      if (now - lastSliderSend > 30) {
         lastSliderSend = now;
         onUpdate(pct);
       }
@@ -250,12 +309,47 @@
     () => { isDraggingMaster = false; }
   );
 
+  // --- Initialize Phone Brightness Slider ---
+  setupSliderEvents(
+    phoneBrightnessTrack,
+    phoneBrightnessFill,
+    phoneBrightnessThumb,
+    phoneBrightnessVal,
+    (pct) => {
+      const rawVal = Math.round((pct / 100) * 255);
+      sendCommand('set-phone-brightness', { volume: rawVal });
+    },
+    () => { isDraggingPhone = true; },
+    () => { isDraggingPhone = false; }
+  );
+
+  // --- Phone Screen Lock / Power ---
+  phoneScreenToggle.addEventListener('click', () => {
+    sendCommand('toggle-phone-screen');
+  });
+
   // --- Mic Toggle ---
   micToggleBtn.addEventListener('click', () => {
     sendCommand('toggle-mic');
   });
 
-  // --- Action Buttons ---
+  // --- Audio Sink Switchers ---
+  document.querySelectorAll('[data-sink]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sinkId = btn.dataset.sink;
+      sendCommand('set-default-sink', { id: sinkId });
+    });
+  });
+
+  // --- App Focus Launchers ---
+  document.querySelectorAll('[data-focus]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const app = btn.dataset.focus;
+      sendCommand('focus-app', { action: app });
+    });
+  });
+
+  // --- Desktop Action Buttons ---
   document.querySelectorAll('.m3-action-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const action = btn.dataset.action;
