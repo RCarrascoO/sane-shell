@@ -40,20 +40,14 @@ Item {
     // 2. INACTIVE TRACK (Right segment with gap)
     Rectangle {
         id: inactiveTrack
+        visible: width > 2
         anchors.verticalCenter: parent.verticalCenter
-        x: root.activeWidth > 0 ? (activeBar.width + root.gap) : 0
+        x: activeBar.width > 0 ? (activeBar.width + root.gap) : 0
         height: root.height
         width: Math.max(0, root.width - x)
         radius: root.height / 2
         color: root.colSecondary
         clip: true
-
-        Behavior on x {
-            NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-        }
-        Behavior on width {
-            NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-        }
 
         // M3 Official Stop Dot at the end of inactive track
         Rectangle {
