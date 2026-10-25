@@ -9,3 +9,6 @@ AgyUsagePopup 1.0 AgyUsagePopup.qml
 SystemPill 1.0 SystemPill.qml
 TrayPill 1.0 TrayPill.qml
 QuickSettingsPopup 1.0 QuickSettingsPopup.qml
+OsdOverlay 1.0 OsdOverlay.qml
+WallpaperPopup 1.0 WallpaperPopup.qml
+AppDrawerPopup 1.0 AppDrawerPopup.qml

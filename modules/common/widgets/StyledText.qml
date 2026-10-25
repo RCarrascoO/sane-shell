@@ -17,6 +17,6 @@ Text {
         family: defaultFont
         pixelSize: Appearance.font.pixelSize.small
     }
-    color: Theme.onSurface
+    color: Theme.colOnSurface
     linkColor: Theme.primary
 }

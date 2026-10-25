@@ -66,7 +66,7 @@ StyledPopup {
                     family: Appearance.font.family.main
                     pixelSize: Appearance.font.pixelSize.smallie
                 }
-                color: Theme.onSurface
+                color: Theme.colOnSurface
                 elide: Text.ElideRight
             }
 
@@ -101,7 +101,7 @@ StyledPopup {
             MaterialSymbol {
                 text: "schedule"
                 iconSize: 11
-                color: Theme.onSurfaceVariant
+                color: Theme.colOnSurfaceVariant
             }
             StyledText {
                 text: (bucketItem.bucketData.displayName.includes("Uso actual") || bucketItem.bucketData.displayName.includes("semanal"))
@@ -111,7 +111,7 @@ StyledPopup {
                     family: Appearance.font.family.main
                     pixelSize: Appearance.font.pixelSize.smallie - 1
                 }
-                color: Theme.onSurfaceVariant
+                color: Theme.colOnSurfaceVariant
             }
         }
 
@@ -158,7 +158,7 @@ StyledPopup {
                         pixelSize: Appearance.font.pixelSize.small
                         weight: Font.Bold
                     }
-                    color: Theme.onSurface
+                    color: Theme.colOnSurface
                 }
 
                 Item { Layout.fillWidth: true }
@@ -178,7 +178,7 @@ StyledPopup {
                             pixelSize: 10
                             weight: Font.DemiBold
                         }
-                        color: Theme.onPrimaryContainer
+                        color: Theme.colOnPrimaryContainer
                     }
                 }
             }
@@ -208,7 +208,7 @@ StyledPopup {
                             pixelSize: Appearance.font.pixelSize.smallie
                             weight: Font.DemiBold
                         }
-                        color: Theme.onSurfaceVariant
+                        color: Theme.colOnSurfaceVariant
                     }
 
                     // Buckets
@@ -274,7 +274,7 @@ StyledPopup {
                         pixelSize: Appearance.font.pixelSize.small
                         weight: Font.Bold
                     }
-                    color: Theme.onSurface
+                    color: Theme.colOnSurface
                 }
 
                 Item { Layout.fillWidth: true }
@@ -294,7 +294,7 @@ StyledPopup {
                             pixelSize: 10
                             weight: Font.Bold
                         }
-                        color: Theme.onTertiaryContainer
+                        color: Theme.colOnTertiaryContainer
                     }
                 }
 
@@ -313,7 +313,7 @@ StyledPopup {
                             pixelSize: 10
                             weight: Font.DemiBold
                         }
-                        color: Theme.onPrimaryContainer
+                        color: Theme.colOnPrimaryContainer
                     }
                 }
             }
@@ -369,7 +369,7 @@ StyledPopup {
                     family: Appearance.font.family.main
                     pixelSize: Appearance.font.pixelSize.smallie
                 }
-                color: Theme.onSurfaceVariant
+                color: Theme.colOnSurfaceVariant
                 elide: Text.ElideRight
             }
         }
@@ -396,7 +396,7 @@ StyledPopup {
                 MaterialSymbol {
                     text: "terminal"
                     iconSize: 16
-                    color: Theme.onSecondaryContainer
+                    color: Theme.colOnSecondaryContainer
                 }
                 StyledText {
                     text: Translation.tr("Antigravity")
@@ -405,7 +405,7 @@ StyledPopup {
                         pixelSize: Appearance.font.pixelSize.smallie
                         weight: Font.DemiBold
                     }
-                    color: Theme.onSecondaryContainer
+                    color: Theme.colOnSecondaryContainer
                 }
             }
         }
@@ -424,7 +424,7 @@ StyledPopup {
                 MaterialSymbol {
                     text: "travel_explore"
                     iconSize: 16
-                    color: Theme.onSecondaryContainer
+                    color: Theme.colOnSecondaryContainer
                 }
                 StyledText {
                     text: Translation.tr("Gemini Web")
@@ -433,7 +433,7 @@ StyledPopup {
                         pixelSize: Appearance.font.pixelSize.smallie
                         weight: Font.DemiBold
                     }
-                    color: Theme.onSecondaryContainer
+                    color: Theme.colOnSecondaryContainer
                 }
             }
         }
@@ -475,7 +475,7 @@ StyledPopup {
                         pixelSize: Appearance.font.pixelSize.larger
                         weight: Font.Bold
                     }
-                    color: Theme.onSurface
+                    color: Theme.colOnSurface
                 }
 
                 Item { Layout.fillWidth: true }
@@ -511,7 +511,7 @@ StyledPopup {
                                 pixelSize: 10
                                 weight: Font.Medium
                             }
-                            color: (popup.quotaData?.busy ?? false) ? Theme.primary : Theme.onSurfaceVariant
+                            color: (popup.quotaData?.busy ?? false) ? Theme.primary : Theme.colOnSurfaceVariant
                         }
                     }
                 }
@@ -532,7 +532,7 @@ StyledPopup {
                         anchors.centerIn: parent
                         text: "refresh"
                         iconSize: 16
-                        color: Theme.onSurfaceVariant
+                        color: Theme.colOnSurfaceVariant
                     }
                     RotationAnimation {
                         id: rotateAnim

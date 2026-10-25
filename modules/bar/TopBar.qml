@@ -65,7 +65,9 @@ PanelWindow {
                 bottomLeftRadius: 13
                 topRightRadius: 4
                 bottomRightRadius: 4
-                color: launcherMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.primaryContainer
+                color: (Theme.activePopup === "appdrawer")
+                    ? Theme.primary
+                    : (launcherMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.primaryContainer)
 
                 Behavior on color {
                     ColorAnimation { duration: 150 }
@@ -75,7 +77,7 @@ PanelWindow {
                     anchors.centerIn: parent
                     text: "apps"
                     iconSize: 16
-                    color: Theme.onPrimaryContainer
+                    color: (Theme.activePopup === "appdrawer") ? Theme.colOnPrimary : Theme.colOnPrimaryContainer
                 }
 
                 MouseArea {
@@ -83,7 +85,7 @@ PanelWindow {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     hoverEnabled: true
-                    onClicked: Quickshell.execDetached(["fuzzel"])
+                    onClicked: Theme.togglePopup("appdrawer")
                 }
             }
 

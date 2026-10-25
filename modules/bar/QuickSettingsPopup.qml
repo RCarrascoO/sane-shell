@@ -109,7 +109,7 @@ StyledPopup {
                             pixelSize: 28
                             weight: Font.Bold
                         }
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                     StyledText {
                         text: root.formatDate(root.currentTime)
@@ -117,7 +117,7 @@ StyledPopup {
                             family: Appearance.font.family.main
                             pixelSize: 12
                         }
-                        color: Theme.onSurfaceVariant
+                        color: Theme.colOnSurfaceVariant
                     }
                 }
 
@@ -131,14 +131,13 @@ StyledPopup {
                     colBackground: Theme.surfaceContainerHigh
                     colBackgroundHover: Theme.surfaceContainerHighest
                     onClicked: {
-                        Theme.activePopup = "";
-                        Quickshell.execDetached(["fuzzel"]);
+                        Theme.togglePopup("appdrawer");
                     }
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
                         text: "apps"
                         iconSize: 18
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                 }
 
@@ -157,7 +156,7 @@ StyledPopup {
                         anchors.centerIn: parent
                         text: "tune"
                         iconSize: 18
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                 }
 
@@ -176,7 +175,7 @@ StyledPopup {
                         anchors.centerIn: parent
                         text: "photo_camera"
                         iconSize: 18
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                 }
             }
@@ -208,20 +207,22 @@ StyledPopup {
                 }
             }
 
-            // 3. 2x3 GRID OF M3 PILL QUICK SETTINGS TILES (height: 58, radius: 29)
+            // 3. 2x4 GRID OF M3 PILL QUICK SETTINGS TILES (height: 58, radius: 29)
             GridLayout {
                 Layout.fillWidth: true
                 columns: 2
                 columnSpacing: 10
                 rowSpacing: 10
 
-                // Tile 1: Internet / Ethernet
+                // Tile 1: Internet / Ethernet / Wi-Fi
                 RippleButton {
+                    id: tileInternet
                     Layout.fillWidth: true
                     implicitHeight: 58
                     buttonRadius: 29
-                    colBackground: Theme.primary
-                    colBackgroundHover: Theme.primary
+                    readonly property bool isActive: SystemStats.ethernetConnected || SystemStats.wifiConnected
+                    colBackground: isActive ? Theme.primary : Theme.surfaceContainerHigh
+                    colBackgroundHover: isActive ? Theme.primary : Theme.surfaceContainerHighest
                     onClicked: {
                         Theme.activePopup = "";
                         Quickshell.execDetached(["nm-connection-editor"]);
@@ -236,9 +237,9 @@ StyledPopup {
                         spacing: 10
 
                         MaterialSymbol {
-                            text: "lan"
+                            text: SystemStats.networkType === "ethernet" ? "lan" : (SystemStats.wifiConnected ? "wifi" : "wifi_off")
                             iconSize: 22
-                            color: Theme.onPrimary
+                            color: tileInternet.isActive ? Theme.colOnPrimary : Theme.primary
                         }
 
                         ColumnLayout {
@@ -247,23 +248,25 @@ StyledPopup {
 
                             StyledText {
                                 Layout.fillWidth: true
-                                text: "Ethernet"
+                                text: SystemStats.networkType === "ethernet" ? "Ethernet" : (SystemStats.wifiConnected ? SystemStats.wifiSsid : "Internet")
                                 font {
                                     family: Appearance.font.family.main
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
-                                color: Theme.onPrimary
+                                color: tileInternet.isActive ? Theme.colOnPrimary : Theme.colOnSurface
                                 elide: Text.ElideRight
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: "Conectado"
+                                text: SystemStats.ethernetConnected ? "Cableada • 1 Gbps" : (SystemStats.wifiConnected ? "Conectado" : "Desconectado")
                                 font {
                                     family: Appearance.font.family.main
                                     pixelSize: 10
                                 }
-                                color: Qt.rgba(Theme.onPrimary.r, Theme.onPrimary.g, Theme.onPrimary.b, 0.8)
+                                color: tileInternet.isActive
+                                    ? Qt.rgba(Theme.colOnPrimary.r, Theme.colOnPrimary.g, Theme.colOnPrimary.b, 0.8)
+                                    : Theme.colOnSurfaceVariant
                                 elide: Text.ElideRight
                             }
                         }
@@ -271,16 +274,95 @@ StyledPopup {
                         MaterialSymbol {
                             text: "chevron_right"
                             iconSize: 16
-                            color: Theme.onPrimary
+                            color: tileInternet.isActive ? Theme.colOnPrimary : Theme.colOnSurfaceVariant
                         }
                     }
                 }
 
-                // Tile 2: Sonido / PipeWire
+                // Tile 2: Bluetooth (hci0)
                 RippleButton {
+                    id: tileBt
                     Layout.fillWidth: true
                     implicitHeight: 58
                     buttonRadius: 29
+                    readonly property bool isActive: SystemStats.bluetoothEnabled
+                    colBackground: isActive ? Theme.primary : Theme.surfaceContainerHigh
+                    colBackgroundHover: isActive ? Theme.primary : Theme.surfaceContainerHighest
+                    onClicked: SystemStats.toggleBluetooth()
+
+                    contentItem: RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: 16
+                            rightMargin: 14
+                        }
+                        spacing: 10
+
+                        MaterialSymbol {
+                            text: SystemStats.bluetoothConnected ? "bluetooth_connected" : "bluetooth"
+                            iconSize: 22
+                            color: tileBt.isActive ? Theme.colOnPrimary : Theme.colOnSurfaceVariant
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: "Bluetooth"
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 12
+                                    weight: Font.Bold
+                                }
+                                color: tileBt.isActive ? Theme.colOnPrimary : Theme.colOnSurface
+                                elide: Text.ElideRight
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: SystemStats.bluetoothConnected
+                                    ? (SystemStats.bluetoothDevice.length > 0 ? SystemStats.bluetoothDevice : "Conectado")
+                                    : (SystemStats.bluetoothEnabled ? "Activado" : "Desactivado")
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
+                                color: tileBt.isActive
+                                    ? Qt.rgba(Theme.colOnPrimary.r, Theme.colOnPrimary.g, Theme.colOnPrimary.b, 0.8)
+                                    : Theme.colOnSurfaceVariant
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // Subaction to open blueman-manager
+                        RippleButton {
+                            implicitWidth: 28
+                            implicitHeight: 28
+                            buttonRadius: 14
+                            colBackground: "transparent"
+                            colBackgroundHover: Qt.rgba(1, 1, 1, 0.15)
+                            onClicked: {
+                                Theme.activePopup = "";
+                                Quickshell.execDetached(["blueman-manager"]);
+                            }
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "settings"
+                                iconSize: 16
+                                color: tileBt.isActive ? Theme.colOnPrimary : Theme.colOnSurfaceVariant
+                            }
+                        }
+                    }
+                }
+
+                // Tile 3: Sonido / PipeWire
+                RippleButton {
+                    id: tileSound
+                    Layout.fillWidth: true
+                    implicitHeight: 58
+                    buttonRadius: 29
+                    readonly property bool isActive: !SystemStats.isMuted
                     colBackground: SystemStats.isMuted ? Theme.surfaceContainerHigh : Theme.primary
                     colBackgroundHover: SystemStats.isMuted ? Theme.surfaceContainerHighest : Theme.primary
                     onClicked: SystemStats.toggleMute()
@@ -296,7 +378,7 @@ StyledPopup {
                         MaterialSymbol {
                             text: SystemStats.isMuted ? "volume_off" : "volume_up"
                             iconSize: 22
-                            color: SystemStats.isMuted ? Theme.error : Theme.onPrimary
+                            color: SystemStats.isMuted ? Theme.error : Theme.colOnPrimary
                         }
 
                         ColumnLayout {
@@ -311,7 +393,7 @@ StyledPopup {
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
-                                color: SystemStats.isMuted ? Theme.onSurface : Theme.onPrimary
+                                color: SystemStats.isMuted ? Theme.colOnSurface : Theme.colOnPrimary
                                 elide: Text.ElideRight
                             }
                             StyledText {
@@ -322,23 +404,99 @@ StyledPopup {
                                     pixelSize: 10
                                 }
                                 color: SystemStats.isMuted
-                                    ? Theme.onSurfaceVariant
-                                    : Qt.rgba(Theme.onPrimary.r, Theme.onPrimary.g, Theme.onPrimary.b, 0.8)
+                                    ? Theme.colOnSurfaceVariant
+                                    : Qt.rgba(Theme.colOnPrimary.r, Theme.colOnPrimary.g, Theme.colOnPrimary.b, 0.8)
                                 elide: Text.ElideRight
                             }
                         }
 
                         // Subaction indicator
-                        MaterialSymbol {
-                            text: "tune"
-                            iconSize: 16
-                            color: SystemStats.isMuted ? Theme.onSurfaceVariant : Theme.onPrimary
+                        RippleButton {
+                            implicitWidth: 28
+                            implicitHeight: 28
+                            buttonRadius: 14
+                            colBackground: "transparent"
+                            colBackgroundHover: Qt.rgba(1, 1, 1, 0.15)
+                            onClicked: {
+                                Theme.activePopup = "";
+                                Quickshell.execDetached(["pavucontrol"]);
+                            }
+                            contentItem: MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "tune"
+                                iconSize: 16
+                                color: SystemStats.isMuted ? Theme.colOnSurfaceVariant : Theme.colOnPrimary
+                            }
                         }
                     }
                 }
 
-                // Tile 3: Tema Oscuro con M3Switch
+                // Tile 4: Luz Nocturna (wlsunset)
                 RippleButton {
+                    id: tileNightLight
+                    Layout.fillWidth: true
+                    implicitHeight: 58
+                    buttonRadius: 29
+                    readonly property bool isActive: SystemStats.nightLightActive
+                    colBackground: isActive ? Theme.primary : Theme.surfaceContainerHigh
+                    colBackgroundHover: isActive ? Theme.primary : Theme.surfaceContainerHighest
+                    onClicked: SystemStats.toggleNightLight()
+
+                    contentItem: RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: 16
+                            rightMargin: 14
+                        }
+                        spacing: 10
+
+                        MaterialSymbol {
+                            text: "nightlight"
+                            iconSize: 22
+                            color: tileNightLight.isActive ? Theme.colOnPrimary : Theme.warning
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: "Luz Nocturna"
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 12
+                                    weight: Font.Bold
+                                }
+                                color: tileNightLight.isActive ? Theme.colOnPrimary : Theme.colOnSurface
+                                elide: Text.ElideRight
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: tileNightLight.isActive ? "Cálido 4000K" : "Desactivada"
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
+                                color: tileNightLight.isActive
+                                    ? Qt.rgba(Theme.colOnPrimary.r, Theme.colOnPrimary.g, Theme.colOnPrimary.b, 0.8)
+                                    : Theme.colOnSurfaceVariant
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        MaterialSymbol {
+                            visible: tileNightLight.isActive
+                            text: "check"
+                            iconSize: 16
+                            color: Theme.colOnPrimary
+                        }
+                    }
+                }
+
+                // Tile 5: Tema Oscuro con M3Switch
+                RippleButton {
+                    id: tileDark
                     Layout.fillWidth: true
                     implicitHeight: 58
                     buttonRadius: 29
@@ -357,7 +515,7 @@ StyledPopup {
                         MaterialSymbol {
                             text: Theme.isDark ? "dark_mode" : "light_mode"
                             iconSize: 20
-                            color: Theme.isDark ? Theme.onPrimary : Theme.primary
+                            color: Theme.isDark ? Theme.colOnPrimary : Theme.primary
                         }
 
                         ColumnLayout {
@@ -372,7 +530,7 @@ StyledPopup {
                                     pixelSize: 11
                                     weight: Font.Bold
                                 }
-                                color: Theme.isDark ? Theme.onPrimary : Theme.onSurface
+                                color: Theme.isDark ? Theme.colOnPrimary : Theme.colOnSurface
                                 elide: Text.ElideRight
                             }
                             StyledText {
@@ -383,8 +541,8 @@ StyledPopup {
                                     pixelSize: 10
                                 }
                                 color: Theme.isDark
-                                    ? Qt.rgba(Theme.onPrimary.r, Theme.onPrimary.g, Theme.onPrimary.b, 0.8)
-                                    : Theme.onSurfaceVariant
+                                    ? Qt.rgba(Theme.colOnPrimary.r, Theme.colOnPrimary.g, Theme.colOnPrimary.b, 0.8)
+                                    : Theme.colOnSurfaceVariant
                                 elide: Text.ElideRight
                             }
                         }
@@ -404,8 +562,71 @@ StyledPopup {
                     }
                 }
 
-                // Tile 4: Captura
+                // Tile 6: Fondos de Pantalla (Wallpaper Picker)
                 RippleButton {
+                    id: tileWallpapers
+                    Layout.fillWidth: true
+                    implicitHeight: 58
+                    buttonRadius: 29
+                    readonly property bool isActive: Theme.activePopup === "wallpaper"
+                    colBackground: isActive ? Theme.primary : Theme.surfaceContainerHigh
+                    colBackgroundHover: isActive ? Theme.primary : Theme.surfaceContainerHighest
+                    onClicked: Theme.togglePopup("wallpaper")
+
+                    contentItem: RowLayout {
+                        anchors {
+                            fill: parent
+                            leftMargin: 16
+                            rightMargin: 14
+                        }
+                        spacing: 10
+
+                        MaterialSymbol {
+                            text: "wallpaper"
+                            iconSize: 22
+                            color: tileWallpapers.isActive ? Theme.colOnPrimary : Theme.primary
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: "Fondos"
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 12
+                                    weight: Font.Bold
+                                }
+                                color: tileWallpapers.isActive ? Theme.colOnPrimary : Theme.colOnSurface
+                                elide: Text.ElideRight
+                            }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: "Selector M3"
+                                font {
+                                    family: Appearance.font.family.main
+                                    pixelSize: 10
+                                }
+                                color: tileWallpapers.isActive
+                                    ? Qt.rgba(Theme.colOnPrimary.r, Theme.colOnPrimary.g, Theme.colOnPrimary.b, 0.8)
+                                    : Theme.colOnSurfaceVariant
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        MaterialSymbol {
+                            text: "grid_view"
+                            iconSize: 16
+                            color: tileWallpapers.isActive ? Theme.colOnPrimary : Theme.colOnSurfaceVariant
+                        }
+                    }
+                }
+
+                // Tile 7: Captura de Pantalla
+                RippleButton {
+                    id: tileScreenshot
                     Layout.fillWidth: true
                     implicitHeight: 58
                     buttonRadius: 29
@@ -442,80 +663,32 @@ StyledPopup {
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
-                                color: Theme.onSurface
+                                color: Theme.colOnSurface
                                 elide: Text.ElideRight
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: "Región de pantalla"
+                                text: "Región Niri"
                                 font {
                                     family: Appearance.font.family.main
                                     pixelSize: 10
                                 }
-                                color: Theme.onSurfaceVariant
+                                color: Theme.colOnSurfaceVariant
                                 elide: Text.ElideRight
                             }
                         }
-                    }
-                }
-
-                // Tile 5: Rendimiento RX 570
-                RippleButton {
-                    Layout.fillWidth: true
-                    implicitHeight: 58
-                    buttonRadius: 29
-                    colBackground: Theme.surfaceContainerHigh
-                    colBackgroundHover: Theme.surfaceContainerHighest
-                    onClicked: {
-                        Theme.activePopup = "";
-                        Quickshell.execDetached(["corectrl"]);
-                    }
-
-                    contentItem: RowLayout {
-                        anchors {
-                            fill: parent
-                            leftMargin: 16
-                            rightMargin: 14
-                        }
-                        spacing: 10
 
                         MaterialSymbol {
-                            text: "speed"
-                            iconSize: 22
-                            color: SystemStats.gpuTemp >= 75 ? Theme.error : Theme.primary
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: `GPU ${SystemStats.gpuTemp}°C`
-                                font {
-                                    family: Appearance.font.family.main
-                                    pixelSize: 12
-                                    weight: Font.Bold
-                                }
-                                color: Theme.onSurface
-                                elide: Text.ElideRight
-                            }
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: `CPU ${SystemStats.cpuUsage}% • ${SystemStats.ramUsedGb}G`
-                                font {
-                                    family: Appearance.font.family.main
-                                    pixelSize: 10
-                                }
-                                color: Theme.onSurfaceVariant
-                                elide: Text.ElideRight
-                            }
+                            text: "crop"
+                            iconSize: 16
+                            color: Theme.colOnSurfaceVariant
                         }
                     }
                 }
 
-                // Tile 6: Portapapeles
+                // Tile 8: Portapapeles
                 RippleButton {
+                    id: tileClipboard
                     Layout.fillWidth: true
                     implicitHeight: 58
                     buttonRadius: 29
@@ -552,7 +725,7 @@ StyledPopup {
                                     pixelSize: 12
                                     weight: Font.Bold
                                 }
-                                color: Theme.onSurface
+                                color: Theme.colOnSurface
                                 elide: Text.ElideRight
                             }
                             StyledText {
@@ -562,9 +735,15 @@ StyledPopup {
                                     family: Appearance.font.family.main
                                     pixelSize: 10
                                 }
-                                color: Theme.onSurfaceVariant
+                                color: Theme.colOnSurfaceVariant
                                 elide: Text.ElideRight
                             }
+                        }
+
+                        MaterialSymbol {
+                            text: "history"
+                            iconSize: 16
+                            color: Theme.colOnSurfaceVariant
                         }
                     }
                 }
@@ -625,7 +804,7 @@ StyledPopup {
                                 pixelSize: 12
                                 weight: Font.Bold
                             }
-                            color: Theme.onSecondaryContainer
+                            color: Theme.colOnSecondaryContainer
                             elide: Text.ElideRight
                         }
 
@@ -636,7 +815,7 @@ StyledPopup {
                                 family: Appearance.font.family.main
                                 pixelSize: 10
                             }
-                            color: Qt.rgba(Theme.onSecondaryContainer.r, Theme.onSecondaryContainer.g, Theme.onSecondaryContainer.b, 0.75)
+                            color: Qt.rgba(Theme.colOnSecondaryContainer.r, Theme.colOnSecondaryContainer.g, Theme.colOnSecondaryContainer.b, 0.75)
                             elide: Text.ElideRight
                         }
                     }
@@ -659,7 +838,7 @@ StyledPopup {
                                 anchors.centerIn: parent
                                 text: "skip_previous"
                                 iconSize: 18
-                                color: Theme.onSecondaryContainer
+                                color: Theme.colOnSecondaryContainer
                             }
                         }
 
@@ -678,7 +857,7 @@ StyledPopup {
                                 anchors.centerIn: parent
                                 text: root.mediaStatus === "Playing" ? "pause" : "play_arrow"
                                 iconSize: 22
-                                color: Theme.onPrimary
+                                color: Theme.colOnPrimary
                             }
                         }
 
@@ -696,7 +875,7 @@ StyledPopup {
                                 anchors.centerIn: parent
                                 text: "skip_next"
                                 iconSize: 18
-                                color: Theme.onSecondaryContainer
+                                color: Theme.colOnSecondaryContainer
                             }
                         }
                     }
@@ -735,7 +914,7 @@ StyledPopup {
                                 pixelSize: 11
                                 weight: Font.Medium
                             }
-                            color: Theme.onSurface
+                            color: Theme.colOnSurface
                         }
                     }
                 }
@@ -757,7 +936,7 @@ StyledPopup {
                         anchors.centerIn: parent
                         text: "lock"
                         iconSize: 16
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                 }
 
@@ -776,7 +955,7 @@ StyledPopup {
                         anchors.centerIn: parent
                         text: "refresh"
                         iconSize: 16
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                 }
 

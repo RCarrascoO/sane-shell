@@ -14,6 +14,8 @@ Item {
     property bool closeOnOutsideClick: true
     property bool popupHovered: false
     property bool isOpen: false
+    property int keyboardFocus: WlrKeyboardFocus.None
+    property int popupY: 6
     default property Item contentItem
 
     signal requestClose()
@@ -50,6 +52,7 @@ Item {
         exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "sane-shell:popup"
+        WlrLayershell.keyboardFocus: root.keyboardFocus
         screen: root.screenTarget ?? null
 
         readonly property int barHeight: (popupWindow.screen?.name === "DVI-D-1") ? 34 : 30
@@ -83,11 +86,13 @@ Item {
         }
 
         readonly property real targetX: {
-            if (!root.hoverTarget) return 10;
+            const scrWidth = popupWindow.screen?.width ?? 1360;
+            if (!root.hoverTarget) {
+                return Math.max(10, (scrWidth - popupContainer.width) / 2);
+            }
             try {
                 const mapPos = root.hoverTarget.mapToItem(null, 0, 0);
                 const idealX = mapPos.x + (root.hoverTarget.width - popupContainer.width) / 2;
-                const scrWidth = popupWindow.screen?.width ?? 1360;
                 return Math.max(10, Math.min(idealX, scrWidth - popupContainer.width - 10));
             } catch(e) {
                 return 10;
@@ -97,7 +102,7 @@ Item {
         Rectangle {
             id: popupContainer
             x: popupWindow.targetX
-            y: 6
+            y: root.popupY
             width: root.contentItem ? root.contentItem.implicitWidth : 300
             height: root.contentItem ? root.contentItem.implicitHeight : 200
 

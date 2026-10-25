@@ -38,7 +38,7 @@ Singleton {
     }
 
     readonly property QtObject inir: QtObject {
-        readonly property color colText: Theme.onSurface
+        readonly property color colText: Theme.colOnSurface
     }
 
     readonly property QtObject colors: QtObject {
@@ -46,12 +46,12 @@ Singleton {
         readonly property color colLayer0Hover: Theme.surfaceContainerHighest
         readonly property color colLayer1: Theme.surfaceContainer
         readonly property color colLayer1Hover: Theme.surfaceContainerHigh
-        readonly property color colOnLayer1: Theme.onSurface
-        readonly property color colOnSurface: Theme.onSurface
-        readonly property color colOnSurfaceVariant: Theme.onSurfaceVariant
+        readonly property color colOnLayer1: Theme.colOnSurface
+        readonly property color colOnSurface: Theme.colOnSurface
+        readonly property color colOnSurfaceVariant: Theme.colOnSurfaceVariant
         readonly property color colPrimary: Theme.primary
         readonly property color colSecondary: Theme.secondary
-        readonly property color colSubtext: Theme.onSurfaceVariant
+        readonly property color colSubtext: Theme.colOnSurfaceVariant
         readonly property color colWarning: Theme.warning
         readonly property color colError: Theme.error
         readonly property color colSuccess: Theme.success

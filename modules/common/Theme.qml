@@ -26,28 +26,28 @@ Singleton {
 
     // Primary Roles & Containers
     readonly property color primary: isDark ? "#b4befe" : "#7287fd" // Pixel Lavender
-    readonly property color onPrimary: isDark ? "#11111b" : "#ffffff"
+    readonly property color colOnPrimary: isDark ? "#11111b" : "#ffffff"
     readonly property color primaryContainer: isDark ? "#3b4261" : "#dbe1ff"
-    readonly property color onPrimaryContainer: isDark ? "#dbe1ff" : "#00174b"
+    readonly property color colOnPrimaryContainer: isDark ? "#dbe1ff" : "#00174b"
 
     // Secondary Roles & Containers
     readonly property color secondary: isDark ? "#89b4fa" : "#1e66f5" // Pixel Blue
-    readonly property color onSecondary: isDark ? "#11111b" : "#ffffff"
+    readonly property color colOnSecondary: isDark ? "#11111b" : "#ffffff"
     readonly property color secondaryContainer: isDark ? "#2e3c56" : "#d8e2ff"
-    readonly property color onSecondaryContainer: isDark ? "#d8e2ff" : "#001a41"
+    readonly property color colOnSecondaryContainer: isDark ? "#d8e2ff" : "#001a41"
 
     // Tertiary Roles & Containers
     readonly property color tertiary: isDark ? "#cba6f7" : "#8839ef" // Mauve
     readonly property color tertiaryContainer: isDark ? "#433458" : "#f2daff"
-    readonly property color onTertiaryContainer: isDark ? "#f2daff" : "#2c0051"
+    readonly property color colOnTertiaryContainer: isDark ? "#f2daff" : "#2c0051"
 
     // Outline & Boundaries
     readonly property color outline: isDark ? "#6c7086" : "#7c7f93"
     readonly property color outlineVariant: isDark ? "#313244" : "#ccd0da"
 
-    // Content & Typography
-    readonly property color onSurface: isDark ? "#cdd6f4" : "#4c4f69"
-    readonly property color onSurfaceVariant: isDark ? "#a6adc8" : "#6c6f85"
+    // Content & Typography (Renamed colOn... to avoid QML onSignalName collision)
+    readonly property color colOnSurface: isDark ? "#cdd6f4" : "#4c4f69"
+    readonly property color colOnSurfaceVariant: isDark ? "#a6adc8" : "#6c6f85"
 
     // Semantic Status Colors
     readonly property color warning: isDark ? "#f9e2af" : "#df8e1d"

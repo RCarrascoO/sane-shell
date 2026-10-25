@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -543,6 +544,145 @@ func runFocus(target string) {
 }
 
 // -------------------------------------------------------------
+// Subcommand: Apps (Desktop Entries)
+// -------------------------------------------------------------
+
+type AppEntry struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	GenericName string `json:"genericName"`
+	Comment     string `json:"comment"`
+	Icon        string `json:"icon"`
+	Exec        string `json:"exec"`
+	Categories  string `json:"categories"`
+	Terminal    bool   `json:"terminal"`
+}
+
+func runApps() {
+	dirs := []string{
+		filepath.Join(getHomeDir(), ".local/share/applications"),
+		"/usr/local/share/applications",
+		"/usr/share/applications",
+	}
+
+	seen := make(map[string]bool)
+	var apps []AppEntry
+	reField := regexp.MustCompile(`%[a-zA-Z]`)
+
+	for _, dir := range dirs {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		for _, f := range files {
+			if f.IsDir() || !strings.HasSuffix(f.Name(), ".desktop") {
+				continue
+			}
+
+			id := f.Name()
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+
+			fullPath := filepath.Join(dir, f.Name())
+			data, err := os.ReadFile(fullPath)
+			if err != nil {
+				continue
+			}
+
+			lines := strings.Split(string(data), "\n")
+			inEntry := false
+			entry := AppEntry{ID: id}
+			noDisplay := false
+			isApp := false
+
+			for _, rawLine := range lines {
+				line := strings.TrimSpace(rawLine)
+				if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+					inEntry = (line == "[Desktop Entry]")
+					continue
+				}
+				if !inEntry || strings.HasPrefix(line, "#") || !strings.Contains(line, "=") {
+					continue
+				}
+
+				parts := strings.SplitN(line, "=", 2)
+				key := strings.TrimSpace(parts[0])
+				val := strings.TrimSpace(parts[1])
+
+				switch key {
+				case "Type":
+					if val == "Application" {
+						isApp = true
+					}
+				case "NoDisplay":
+					if strings.EqualFold(val, "true") {
+						noDisplay = true
+					}
+				case "Hidden":
+					if strings.EqualFold(val, "true") {
+						noDisplay = true
+					}
+				case "Name":
+					if entry.Name == "" {
+						entry.Name = val
+					}
+				case "GenericName":
+					if entry.GenericName == "" {
+						entry.GenericName = val
+					}
+				case "Comment":
+					if entry.Comment == "" {
+						entry.Comment = val
+					}
+				case "Icon":
+					if entry.Icon == "" {
+						entry.Icon = val
+					}
+				case "Exec":
+					if entry.Exec == "" {
+						entry.Exec = strings.TrimSpace(reField.ReplaceAllString(val, ""))
+					}
+				case "Categories":
+					if entry.Categories == "" {
+						entry.Categories = val
+					}
+				case "Terminal":
+					if strings.EqualFold(val, "true") {
+						entry.Terminal = true
+					}
+				}
+			}
+
+			if isApp && !noDisplay && entry.Name != "" && entry.Exec != "" {
+				apps = append(apps, entry)
+			}
+		}
+	}
+
+	sort.Slice(apps, func(i, j int) bool {
+		return strings.ToLower(apps[i].Name) < strings.ToLower(apps[j].Name)
+	})
+
+	bytesOut, _ := json.Marshal(apps)
+	os.Stdout.Write(bytesOut)
+	fmt.Println()
+}
+
+// -------------------------------------------------------------
+// Subcommand: Toggle Popup
+// -------------------------------------------------------------
+
+func runTogglePopup(name string) {
+	if name == "" {
+		name = "appdrawer"
+	}
+	_ = exec.Command("qs", "ipc", "-c", "sane-shell", "call", "shell", "togglePopup", name).Run()
+}
+
+// -------------------------------------------------------------
 // Main entry
 // -------------------------------------------------------------
 
@@ -565,6 +705,16 @@ func main() {
 		runFocus(target)
 	case "focus-zen":
 		runFocus("zen")
+	case "apps":
+		runApps()
+	case "toggle-popup":
+		name := "appdrawer"
+		if len(os.Args) > 2 {
+			name = os.Args[2]
+		}
+		runTogglePopup(name)
+	case "toggle-drawer":
+		runTogglePopup("appdrawer")
 	case "quota":
 		fallthrough
 	default:

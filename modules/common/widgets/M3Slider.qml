@@ -52,7 +52,7 @@ Item {
             }
             text: root.icon
             iconSize: 20
-            color: root.isMuted ? Theme.error : Theme.onPrimary
+            color: root.isMuted ? Theme.error : Theme.colOnPrimary
         }
     }
 
@@ -64,7 +64,7 @@ Item {
         width: root.handleWidth
         height: 44
         radius: root.handleWidth / 2
-        color: root.isMuted ? Theme.onSurfaceVariant : Theme.primary
+        color: root.isMuted ? Theme.colOnSurfaceVariant : Theme.primary
 
         Behavior on width {
             NumberAnimation { duration: 100 }
@@ -108,7 +108,7 @@ Item {
                 pixelSize: 12
                 weight: Font.Bold
             }
-            color: Theme.onSecondaryContainer
+            color: Theme.colOnSecondaryContainer
         }
 
         // M3 Official Stop Dot indicator
@@ -122,7 +122,7 @@ Item {
             width: 4
             height: 4
             radius: 2
-            color: Theme.onSecondaryContainer
+            color: Theme.colOnSecondaryContainer
         }
     }
 

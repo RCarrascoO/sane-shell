@@ -78,7 +78,7 @@ Rectangle {
                 lineWidth: 2
                 value: root.fraction
                 colPrimary: root.isPopupOpen
-                    ? Theme.onPrimary
+                    ? Theme.colOnPrimary
                     : (root.percentage <= 15
                         ? Theme.error
                         : (root.percentage <= 40 ? Theme.warning : Theme.secondary))
@@ -93,8 +93,8 @@ Rectangle {
                 height: 10
                 colorize: true
                 color: root.isPopupOpen
-                    ? Theme.onPrimary
-                    : (root.busy ? Theme.primary : Theme.onSecondaryContainer)
+                    ? Theme.colOnPrimary
+                    : (root.busy ? Theme.primary : Theme.colOnSecondaryContainer)
 
                 SequentialAnimation on opacity {
                     running: root.busy
@@ -115,8 +115,8 @@ Rectangle {
                 weight: Font.DemiBold
             }
             color: root.isPopupOpen
-                ? Theme.onPrimary
-                : (root.percentage <= 15 ? Theme.error : (root.percentage <= 40 ? Theme.warning : Theme.onSecondaryContainer))
+                ? Theme.colOnPrimary
+                : (root.percentage <= 15 ? Theme.error : (root.percentage <= 40 ? Theme.warning : Theme.colOnSecondaryContainer))
         }
     }
 

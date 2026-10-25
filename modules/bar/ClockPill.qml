@@ -64,7 +64,7 @@ Rectangle {
                 pixelSize: Appearance.font.pixelSize.smallie
                 weight: Font.DemiBold
             }
-            color: root.isPopupOpen ? Theme.onPrimary : Theme.onSurface
+            color: root.isPopupOpen ? Theme.colOnPrimary : Theme.colOnSurface
         }
     }
 
@@ -112,7 +112,7 @@ Rectangle {
                             weight: Font.DemiBold
                             letterSpacing: 1.2
                         }
-                        color: Theme.onSurfaceVariant
+                        color: Theme.colOnSurfaceVariant
                     }
 
                     StyledText {
@@ -122,7 +122,7 @@ Rectangle {
                             pixelSize: 24
                             weight: Font.Bold
                         }
-                        color: Theme.onSurface
+                        color: Theme.colOnSurface
                     }
                 }
 
@@ -167,7 +167,7 @@ Rectangle {
                                 pixelSize: 11
                                 weight: Font.Bold
                             }
-                            color: Theme.onSurfaceVariant
+                            color: Theme.colOnSurfaceVariant
                         }
                     }
                 }
@@ -220,7 +220,7 @@ Rectangle {
                                     pixelSize: 12
                                     weight: parent.modelData.isToday ? Font.Bold : Font.Normal
                                 }
-                                color: parent.modelData.isToday ? Theme.onPrimary : Theme.onSurface
+                                color: parent.modelData.isToday ? Theme.colOnPrimary : Theme.colOnSurface
                             }
 
                             MouseArea {

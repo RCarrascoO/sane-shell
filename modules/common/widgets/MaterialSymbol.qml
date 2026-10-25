@@ -8,7 +8,7 @@ Item {
     property real iconSize: 16
     property real fill: 0
     property string text: ""
-    property color color: Theme.onSurface
+    property color color: Theme.colOnSurface
     property int horizontalAlignment: Text.AlignHCenter
     property int verticalAlignment: Text.AlignVCenter
 

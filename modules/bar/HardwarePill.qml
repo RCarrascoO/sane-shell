@@ -25,7 +25,7 @@ Item {
             bottomLeftRadius: 13
             topRightRadius: 4
             bottomRightRadius: 4
-            color: hwMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+            color: Theme.surfaceContainerHigh
 
             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -37,7 +37,7 @@ Item {
                 MaterialSymbol {
                     text: "memory"
                     iconSize: 14
-                    color: SystemStats.cpuPercent >= 80 ? Theme.error : (SystemStats.cpuPercent >= 50 ? Theme.warning : Theme.onSurfaceVariant)
+                    color: SystemStats.cpuPercent >= 80 ? Theme.error : (SystemStats.cpuPercent >= 50 ? Theme.warning : Theme.colOnSurfaceVariant)
                 }
                 StyledText {
                     text: `${SystemStats.cpuPercent}%`
@@ -46,7 +46,7 @@ Item {
                         pixelSize: Appearance.font.pixelSize.smallie
                         weight: Font.DemiBold
                     }
-                    color: SystemStats.cpuPercent >= 80 ? Theme.error : (SystemStats.cpuPercent >= 50 ? Theme.warning : Theme.onSurface)
+                    color: SystemStats.cpuPercent >= 80 ? Theme.error : (SystemStats.cpuPercent >= 50 ? Theme.warning : Theme.colOnSurface)
                 }
             }
         }
@@ -56,7 +56,7 @@ Item {
             implicitHeight: 26
             implicitWidth: ramContent.implicitWidth + 16
             radius: 4
-            color: hwMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+            color: Theme.surfaceContainerHigh
 
             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -68,7 +68,7 @@ Item {
                 MaterialSymbol {
                     text: "developer_board"
                     iconSize: 14
-                    color: SystemStats.ramPercent >= 85 ? Theme.error : (SystemStats.ramPercent >= 70 ? Theme.warning : Theme.onSurfaceVariant)
+                    color: SystemStats.ramPercent >= 85 ? Theme.error : (SystemStats.ramPercent >= 70 ? Theme.warning : Theme.colOnSurfaceVariant)
                 }
                 StyledText {
                     text: `${SystemStats.ramUsedGB}G`
@@ -77,7 +77,7 @@ Item {
                         pixelSize: Appearance.font.pixelSize.smallie
                         weight: Font.DemiBold
                     }
-                    color: SystemStats.ramPercent >= 85 ? Theme.error : (SystemStats.ramPercent >= 70 ? Theme.warning : Theme.onSurface)
+                    color: SystemStats.ramPercent >= 85 ? Theme.error : (SystemStats.ramPercent >= 70 ? Theme.warning : Theme.colOnSurface)
                 }
             }
         }
@@ -90,7 +90,7 @@ Item {
             bottomLeftRadius: 4
             topRightRadius: 13
             bottomRightRadius: 13
-            color: hwMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+            color: Theme.surfaceContainerHigh
 
             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -111,17 +111,9 @@ Item {
                         pixelSize: Appearance.font.pixelSize.smallie
                         weight: Font.DemiBold
                     }
-                    color: SystemStats.gpuTemp >= 75 ? Theme.error : (SystemStats.gpuTemp >= 60 ? Theme.warning : Theme.onSurface)
+                    color: SystemStats.gpuTemp >= 75 ? Theme.error : (SystemStats.gpuTemp >= 60 ? Theme.warning : Theme.colOnSurface)
                 }
             }
         }
-    }
-
-    MouseArea {
-        id: hwMouse
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        hoverEnabled: true
-        onClicked: Quickshell.execDetached(["kitty", "-e", "btop"])
     }
 }

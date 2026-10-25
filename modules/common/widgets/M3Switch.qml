@@ -35,7 +35,7 @@ Rectangle {
         height: root.checked ? 24 : (switchMouse.pressed ? 24 : 16)
         radius: width / 2
 
-        color: root.checked ? Theme.onPrimary : Theme.outline
+        color: root.checked ? Theme.colOnPrimary : Theme.outline
 
         Behavior on x {
             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }

@@ -3,6 +3,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Services.SystemTray
 import Quickshell.Widgets
 
@@ -35,13 +36,21 @@ Rectangle {
                 implicitWidth: 16
                 implicitHeight: 16
                 cursorShape: Qt.PointingHandCursor
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+
+                QsMenuAnchor {
+                    id: menuAnchor
+                    menu: trayItemArea.modelData.menu
+                    anchor.item: trayItemArea
+                }
 
                 onClicked: mouse => {
                     if (mouse.button === Qt.LeftButton) {
-                        modelData.activate();
-                    } else if (mouse.button === Qt.RightButton && modelData.hasMenu) {
-                        modelData.secondaryActivate();
+                        trayItemArea.modelData.activate();
+                    } else if (mouse.button === Qt.MiddleButton) {
+                        trayItemArea.modelData.secondaryActivate();
+                    } else if (mouse.button === Qt.RightButton && trayItemArea.modelData.hasMenu) {
+                        menuAnchor.open();
                     }
                 }
 

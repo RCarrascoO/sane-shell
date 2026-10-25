@@ -32,24 +32,44 @@ Rectangle {
     RowLayout {
         id: sysRow
         anchors.centerIn: parent
-        spacing: 8
+        spacing: 6
 
-        // Network status icon
+        // 1. Network status icon (LAN or Wi-Fi)
         MaterialSymbol {
-            text: "lan"
+            text: SystemStats.networkType === "ethernet"
+                ? "lan"
+                : (SystemStats.networkType === "wifi" ? "wifi" : "wifi_off")
             iconSize: 14
-            color: root.isPopupOpen ? Theme.onPrimary : Theme.primary
+            color: root.isPopupOpen ? Theme.colOnPrimary : Theme.primary
         }
 
-        // Audio volume icon + percentage
+        // 2. Bluetooth (visible when active)
+        MaterialSymbol {
+            visible: SystemStats.bluetoothEnabled
+            text: SystemStats.bluetoothConnected ? "bluetooth_connected" : "bluetooth"
+            iconSize: 14
+            color: root.isPopupOpen ? Theme.colOnPrimary : Theme.primary
+        }
+
+        // 3. Night Light (visible when active)
+        MaterialSymbol {
+            visible: SystemStats.nightLightActive
+            text: "nightlight"
+            iconSize: 14
+            color: root.isPopupOpen ? Theme.colOnPrimary : Theme.warning
+        }
+
+        // 4. Audio volume icon + percentage
         RowLayout {
             spacing: 3
             MaterialSymbol {
-                text: SystemStats.isMuted ? "volume_off" : (SystemStats.volume > 50 ? "volume_up" : "volume_down")
+                text: SystemStats.isMuted
+                    ? "volume_off"
+                    : (SystemStats.volume === 0 ? "volume_mute" : (SystemStats.volume > 50 ? "volume_up" : "volume_down"))
                 iconSize: 14
                 color: root.isPopupOpen
-                    ? Theme.onPrimary
-                    : (SystemStats.isMuted ? Theme.error : Theme.onSurfaceVariant)
+                    ? Theme.colOnPrimary
+                    : (SystemStats.isMuted ? Theme.error : Theme.colOnSurfaceVariant)
             }
             StyledText {
                 text: `${SystemStats.volume}%`
@@ -59,16 +79,16 @@ Rectangle {
                     weight: Font.DemiBold
                 }
                 color: root.isPopupOpen
-                    ? Theme.onPrimary
-                    : (SystemStats.isMuted ? Theme.error : Theme.onSurface)
+                    ? Theme.colOnPrimary
+                    : (SystemStats.isMuted ? Theme.error : Theme.colOnSurface)
             }
         }
 
-        // Theme indicator icon
+        // 5. Theme indicator icon
         MaterialSymbol {
             text: Theme.isDark ? "dark_mode" : "light_mode"
             iconSize: 14
-            color: root.isPopupOpen ? Theme.onPrimary : Theme.primary
+            color: root.isPopupOpen ? Theme.colOnPrimary : Theme.primary
         }
     }
 

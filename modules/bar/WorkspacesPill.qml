@@ -41,7 +41,7 @@ RowLayout {
                     width: modelData.isActive ? 28 : (modelData.hasWindows ? 10 : 8)
                     color: modelData.isActive
                         ? Theme.primary
-                        : (modelData.hasWindows ? Theme.onSurfaceVariant : Theme.outline)
+                        : (modelData.hasWindows ? Theme.colOnSurfaceVariant : Theme.outline)
 
                     Behavior on width {
                         NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
@@ -85,7 +85,7 @@ RowLayout {
                 pixelSize: Appearance.font.pixelSize.smallie
                 weight: Font.Medium
             }
-            color: Theme.onSurface
+            color: Theme.colOnSurface
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
         }
