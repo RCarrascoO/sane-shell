@@ -34,12 +34,12 @@ width=2
 radius=20
 
 [colors]
-background=1e1e2edd
+background=1e1e2ef2
 text=cdd6f4ff
 match=b4befeff
-selection=45475aff
-selection-text=cdd6f4ff
-selection-match=b4befeff
+selection=b4befeff
+selection-text=11111bff
+selection-match=11111bff
 border=b4befeff
 EOF
 else
@@ -73,4 +73,4 @@ border=7287fdff
 EOF
 fi
 
-echo "{\"isDark\":$IS_DARK}" > "$THEME_FILE"
+printf '{"isDark":%s}\n' "$IS_DARK" > "$THEME_FILE"

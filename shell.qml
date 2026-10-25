@@ -5,10 +5,28 @@
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
+import qs.modules.common
 import qs.modules.bar
 
 ShellRoot {
     id: root
+
+    IpcHandler {
+        target: "shell"
+
+        function togglePopup(name: string) {
+            Theme.togglePopup(name);
+        }
+
+        function closePopups() {
+            Theme.closePopups();
+        }
+
+        function toggleTheme() {
+            Theme.toggleTheme();
+        }
+    }
 
     Variants {
         model: Quickshell.screens

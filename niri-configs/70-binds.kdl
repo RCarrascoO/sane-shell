@@ -35,7 +35,6 @@ binds {
 
     // App launcher / overview.
     Mod+Space repeat=false { spawn "fuzzel"; }
-    Mod+D { spawn "fuzzel"; }
 
     // Clipboard history.
     Mod+V { spawn "sh" "-c" "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"; }

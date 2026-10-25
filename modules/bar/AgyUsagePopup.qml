@@ -8,6 +8,8 @@ import Quickshell
 
 StyledPopup {
     id: popup
+    popupId: "agy"
+    hoverActivates: false
 
     property var quotaData: null
     property bool isHorizontalScreen: true

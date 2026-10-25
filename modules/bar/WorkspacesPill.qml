@@ -15,9 +15,9 @@ RowLayout {
 
     // Workspaces pill container
     Rectangle {
-        implicitHeight: 22
+        implicitHeight: 24
         implicitWidth: wsRow.implicitWidth + 16
-        radius: 11
+        radius: 12
         color: Theme.surfaceContainer
 
         RowLayout {
@@ -32,17 +32,20 @@ RowLayout {
                     id: wsRect
                     required property var modelData
 
-                    height: 10
-                    radius: 5
-
-                    // Android 16 expressive pill dynamic width
-                    width: modelData.isActive ? 26 : (modelData.hasWindows ? 10 : 8)
+                    // Android 16 expressive dynamic capsule indicators
+                    height: modelData.isActive ? 10 : 8
+                    radius: modelData.isActive ? 5 : 4
+                    width: modelData.isActive ? 28 : (modelData.hasWindows ? 10 : 8)
                     color: modelData.isActive
                         ? Theme.primary
                         : (modelData.hasWindows ? Theme.onSurfaceVariant : Theme.outline)
 
                     Behavior on width {
-                        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    }
+
+                    Behavior on height {
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                     }
 
                     Behavior on color {
@@ -59,33 +62,29 @@ RowLayout {
         }
     }
 
-    // Active Window Title (only on main monitor)
-    Item {
+    // Active Window Title Pill (Capsule showing active app)
+    Rectangle {
         visible: root.showTitle && (NiriState.activeWindowTitle.length > 0)
-        implicitHeight: 22
-        implicitWidth: Math.min(260, titleText.implicitWidth + 16)
+        implicitHeight: 24
+        implicitWidth: Math.min(240, titleText.implicitWidth + 20)
+        radius: 12
+        color: Theme.surfaceContainer
 
-        Rectangle {
-            anchors.fill: parent
-            radius: 11
-            color: Qt.rgba(Theme.surfaceContainer.r, Theme.surfaceContainer.g, Theme.surfaceContainer.b, 0.6)
-
-            StyledText {
-                id: titleText
-                anchors {
-                    fill: parent
-                    leftMargin: 10
-                    rightMargin: 10
-                }
-                text: NiriState.activeWindowTitle
-                font {
-                    pixelSize: Appearance.font.pixelSize.smallie
-                    weight: Font.Medium
-                }
-                color: Theme.onSurface
-                elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
+        StyledText {
+            id: titleText
+            anchors {
+                fill: parent
+                leftMargin: 10
+                rightMargin: 10
             }
+            text: NiriState.activeWindowTitle
+            font {
+                pixelSize: Appearance.font.pixelSize.smallie
+                weight: Font.Medium
+            }
+            color: Theme.onSurface
+            elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
         }
     }
 }

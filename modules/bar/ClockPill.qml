@@ -8,11 +8,15 @@ Rectangle {
     id: root
 
     property bool compact: false
+    property var screenTarget: null
+    readonly property bool isPopupOpen: Theme.activePopup === "calendar"
 
-    implicitHeight: 22
+    implicitHeight: 24
     implicitWidth: clockContent.implicitWidth + 20
-    radius: 11
-    color: clockMouse.containsMouse ? Theme.surfaceContainerHigh : Theme.surfaceContainer
+    radius: 12
+    color: isPopupOpen
+        ? Theme.primary
+        : (clockMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
 
     Behavior on color {
         ColorAnimation { duration: 150 }
@@ -37,7 +41,7 @@ Rectangle {
     function formatDate(d) {
         const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
         const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-        return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+        return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
     }
 
     RowLayout {
@@ -52,9 +56,9 @@ Rectangle {
             font {
                 family: Appearance.font.family.numbers
                 pixelSize: Appearance.font.pixelSize.smallie
-                weight: Font.Medium
+                weight: Font.DemiBold
             }
-            color: Theme.onSurface
+            color: root.isPopupOpen ? Theme.onPrimary : Theme.onSurface
         }
     }
 
@@ -63,17 +67,21 @@ Rectangle {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         hoverEnabled: true
-        onClicked: calPopup.isOpen = !calPopup.isOpen
+        onClicked: {
+            Theme.activePopup = (Theme.activePopup === "calendar") ? "" : "calendar";
+        }
     }
 
-    // Calendar Popup
+    // Android 16 Material 3 Expressive Calendar Popup
     StyledPopup {
         id: calPopup
+        popupId: "calendar"
         hoverTarget: root
+        screenTarget: root.screenTarget
         hoverActivates: false
 
         contentItem: Rectangle {
-            implicitWidth: 260
+            implicitWidth: 280
             implicitHeight: calCol.implicitHeight + 24
             color: "transparent"
 
@@ -81,11 +89,11 @@ Rectangle {
                 id: calCol
                 anchors {
                     fill: parent
-                    margins: 12
+                    margins: 16
                 }
-                spacing: 10
+                spacing: 12
 
-                // Header
+                // Header: Month & Year
                 RowLayout {
                     Layout.fillWidth: true
                     StyledText {
@@ -94,7 +102,7 @@ Rectangle {
                             return `${months[root.currentTime.getMonth()]} ${root.currentTime.getFullYear()}`;
                         }
                         font {
-                            pixelSize: Appearance.font.pixelSize.larger
+                            pixelSize: 16
                             weight: Font.Bold
                         }
                         color: Theme.primary
@@ -102,7 +110,7 @@ Rectangle {
                     Item { Layout.fillWidth: true }
                 }
 
-                // Days of week header
+                // Days of week header (L M X J V S D)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 4
@@ -113,8 +121,10 @@ Rectangle {
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData
-                            font.pixelSize: 10
-                            font.weight: Font.Bold
+                            font {
+                                pixelSize: 11
+                                weight: Font.Bold
+                            }
                             color: Theme.onSurfaceVariant
                         }
                     }
@@ -149,9 +159,9 @@ Rectangle {
 
                         Rectangle {
                             required property var modelData
-                            Layout.preferredWidth: 28
-                            Layout.preferredHeight: 28
-                            radius: 14
+                            Layout.preferredWidth: 30
+                            Layout.preferredHeight: 30
+                            radius: 15
                             color: modelData.isToday ? Theme.primary : "transparent"
 
                             StyledText {
@@ -160,7 +170,7 @@ Rectangle {
                                 text: String(parent.modelData.day)
                                 font {
                                     family: Appearance.font.family.numbers
-                                    pixelSize: 11
+                                    pixelSize: 12
                                     weight: parent.modelData.isToday ? Font.Bold : Font.Normal
                                 }
                                 color: parent.modelData.isToday ? Theme.onPrimary : Theme.onSurface

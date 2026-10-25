@@ -7,27 +7,26 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 
-MouseArea {
+Rectangle {
     id: root
 
+    property var screenTarget: null
     property var quotaData: null
     readonly property int percentage: quotaData?.primaryPercentage ?? 100
     readonly property real fraction: quotaData?.primaryFraction ?? 1.0
     readonly property bool busy: quotaData?.busy ?? false
     readonly property bool running: quotaData?.running ?? false
+    readonly property bool isPopupOpen: Theme.activePopup === "agy"
 
-    implicitHeight: Appearance.sizes.barHeight
-    implicitWidth: contentRow.implicitWidth + 12
-    hoverEnabled: true
+    implicitHeight: 24
+    implicitWidth: contentRow.implicitWidth + 20
+    radius: 12
+    color: isPopupOpen
+        ? Theme.primary
+        : (agyMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
 
-    acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-    onClicked: mouse => {
-        if (mouse.button === Qt.LeftButton) {
-            focusProcess.running = true;
-        } else if (mouse.button === Qt.RightButton) {
-            quotaProcess.running = true;
-        }
+    Behavior on color {
+        ColorAnimation { duration: 150 }
     }
 
     // Process to focus or launch Antigravity
@@ -63,18 +62,6 @@ MouseArea {
         }
     }
 
-    // Hover background pill
-    Rectangle {
-        anchors.fill: parent
-        anchors.topMargin: 4
-        anchors.bottomMargin: 4
-        radius: Appearance.rounding.full
-        color: root.containsMouse ? Appearance.colors.colLayer0Hover : "transparent"
-        Behavior on color {
-            ColorAnimation { duration: 150 }
-        }
-    }
-
     RowLayout {
         id: contentRow
         anchors.centerIn: parent
@@ -82,32 +69,32 @@ MouseArea {
 
         // Centered Ring indicator with perfectly aligned Gemini icon
         Item {
-            implicitWidth: 20
-            implicitHeight: 20
+            implicitWidth: 16
+            implicitHeight: 16
             Layout.alignment: Qt.AlignVCenter
 
             ClippedOutlineCircularProgress {
                 anchors.fill: parent
                 lineWidth: 2
                 value: root.fraction
-                colPrimary: root.percentage <= 15
-                    ? Appearance.colors.colError
-                    : (root.percentage <= 40
-                        ? Appearance.colors.colWarning
-                        : (Appearance.inirEverywhere ? Appearance.inir.colText : "#52B768"))
-                colSecondary: Qt.rgba(1, 1, 1, 0.15)
+                colPrimary: root.isPopupOpen
+                    ? Theme.onPrimary
+                    : (root.percentage <= 15
+                        ? Theme.error
+                        : (root.percentage <= 40 ? Theme.warning : "#52B768"))
+                colSecondary: root.isPopupOpen ? Qt.rgba(0, 0, 0, 0.2) : Qt.rgba(1, 1, 1, 0.15)
                 enableAnimation: true
             }
 
             CustomIcon {
                 anchors.centerIn: parent
                 source: "google-gemini-symbolic"
-                width: 12
-                height: 12
+                width: 10
+                height: 10
                 colorize: true
-                color: root.busy
-                    ? Appearance.colors.colPrimary
-                    : (Appearance.inirEverywhere ? Appearance.inir.colText : Appearance.colors.colOnSurfaceVariant)
+                color: root.isPopupOpen
+                    ? Theme.onPrimary
+                    : (root.busy ? Theme.primary : Theme.onSurfaceVariant)
 
                 SequentialAnimation on opacity {
                     running: root.busy
@@ -123,19 +110,38 @@ MouseArea {
             Layout.alignment: Qt.AlignVCenter
             text: `${root.percentage}%`
             font {
-                family: Appearance.zzzEverywhere ? Appearance.font.family.numbers : Appearance.font.family.main
-                pixelSize: Appearance.font.pixelSize.small
-                weight: Font.Medium
+                family: Appearance.font.family.numbers
+                pixelSize: Appearance.font.pixelSize.smallie
+                weight: Font.DemiBold
             }
-            color: root.percentage <= 15
-                ? Appearance.colors.colError
-                : (root.percentage <= 40 ? Appearance.colors.colWarning : (Appearance.inirEverywhere ? Appearance.inir.colText : Appearance.colors.colOnLayer1))
+            color: root.isPopupOpen
+                ? Theme.onPrimary
+                : (root.percentage <= 15 ? Theme.error : (root.percentage <= 40 ? Theme.warning : Theme.onSurface))
+        }
+    }
+
+    MouseArea {
+        id: agyMouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+
+        onClicked: mouse => {
+            if (mouse.button === Qt.LeftButton) {
+                Theme.activePopup = (Theme.activePopup === "agy") ? "" : "agy";
+            } else if (mouse.button === Qt.MiddleButton) {
+                focusProcess.running = true;
+            } else if (mouse.button === Qt.RightButton) {
+                quotaProcess.running = true;
+            }
         }
     }
 
     AgyUsagePopup {
         id: usagePopup
         hoverTarget: root
+        screenTarget: root.screenTarget
         quotaData: root.quotaData
         isHorizontalScreen: (root.window?.screen?.width ?? 1360) > (root.window?.screen?.height ?? 768)
         onRequestRefresh: {

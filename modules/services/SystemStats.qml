@@ -7,8 +7,12 @@ Singleton {
     id: root
 
     property int cpuPercent: 0
+    property alias cpuUsage: root.cpuPercent
+
     property int ramPercent: 0
     property string ramUsedGB: "0.0"
+    property alias ramUsedGb: root.ramUsedGB
+
     property int gpuTemp: 40
     property int volume: 50
     property bool isMuted: false

@@ -7,4 +7,5 @@ HardwarePill 1.0 HardwarePill.qml
 AgyUsage 1.0 AgyUsage.qml
 AgyUsagePopup 1.0 AgyUsagePopup.qml
 SystemPill 1.0 SystemPill.qml
+TrayPill 1.0 TrayPill.qml
 QuickSettingsPopup 1.0 QuickSettingsPopup.qml
