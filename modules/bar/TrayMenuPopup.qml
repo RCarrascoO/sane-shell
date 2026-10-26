@@ -11,14 +11,20 @@ PanelWindow {
     id: root
 
     property QsMenuHandle menuHandle: null
+    property QsMenuHandle activeHandle: null
+    property var handleHistory: []
     property real targetX: 100
 
     function open() {
+        handleHistory = [];
+        activeHandle = menuHandle;
         visible = true;
     }
 
     function close() {
         visible = false;
+        handleHistory = [];
+        activeHandle = menuHandle;
     }
 
     onVisibleChanged: {
@@ -53,7 +59,7 @@ PanelWindow {
 
     QsMenuOpener {
         id: menuOpener
-        menu: root.menuHandle
+        menu: root.activeHandle ?? root.menuHandle
     }
 
     // 1. Outside dismiss background
@@ -91,6 +97,41 @@ PanelWindow {
             anchors.margins: 8
             spacing: 2
 
+            // Back button when inside a submenu
+            RippleButton {
+                visible: root.handleHistory.length > 0
+                Layout.fillWidth: true
+                implicitHeight: 32
+                implicitWidth: 160
+                buttonRadius: 8
+                colBackground: "transparent"
+                colBackgroundHover: Theme.surfaceContainerHighest
+                onClicked: {
+                    const hist = root.handleHistory.slice();
+                    const prev = hist.pop();
+                    root.handleHistory = hist;
+                    root.activeHandle = prev;
+                }
+                contentItem: RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    spacing: 6
+                    MaterialSymbol {
+                        text: "arrow_back"
+                        iconSize: 16
+                        color: Theme.primary
+                    }
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: "Volver"
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: Theme.primary
+                    }
+                }
+            }
+
             Repeater {
                 model: menuOpener.children
 
@@ -99,6 +140,7 @@ PanelWindow {
                     required property QsMenuEntry modelData
 
                     Layout.fillWidth: true
+                    implicitWidth: entryRow.implicitWidth + 24
                     implicitHeight: modelData.isSeparator ? 9 : 32
 
                     // Separator line
@@ -133,7 +175,11 @@ PanelWindow {
                             onClicked: {
                                 if (!delegateItem.modelData.enabled) return;
                                 if (delegateItem.modelData.hasChildren) {
-                                    // Submenu support if available
+                                    const hist = root.handleHistory.slice();
+                                    hist.push(root.activeHandle ?? root.menuHandle);
+                                    root.handleHistory = hist;
+                                    root.activeHandle = delegateItem.modelData;
+                                    return;
                                 }
                                 delegateItem.modelData.triggered();
                                 root.close();
@@ -141,6 +187,7 @@ PanelWindow {
                         }
 
                         RowLayout {
+                            id: entryRow
                             anchors.fill: parent
                             anchors.leftMargin: 10
                             anchors.rightMargin: 10
