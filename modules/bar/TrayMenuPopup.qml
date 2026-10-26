@@ -7,10 +7,11 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Widgets
 
-PopupWindow {
+PanelWindow {
     id: root
 
     property QsMenuHandle menuHandle: null
+    property real targetX: 100
 
     function open() {
         visible = true;
@@ -20,32 +21,34 @@ PopupWindow {
         visible = false;
     }
 
+    onVisibleChanged: {
+        if (!visible) {
+            // panel closed
+        }
+    }
+
     visible: false
     color: "transparent"
+    exclusionMode: ExclusionMode.Ignore
+    exclusiveZone: 0
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "sane-shell:traymenu"
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    implicitWidth: Math.max(180, card.implicitWidth + 8)
-    implicitHeight: card.implicitHeight + 8
+    readonly property int barHeight: (root.screen?.name === "DVI-D-1") ? 34 : 30
 
-    // Dismiss overlay to capture clicks outside on Wayland/Niri
-    PanelWindow {
-        id: backdrop
-        visible: root.visible
-        color: "transparent"
-        exclusiveZone: 0
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "sane-shell:traymenu-backdrop"
-        anchors {
-            top: true
-            bottom: true
-            left: true
-            right: true
-        }
+    anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
+    }
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-            onClicked: root.close()
-        }
+    margins {
+        top: root.barHeight
+        bottom: 0
+        left: 0
+        right: 0
     }
 
     QsMenuOpener {
@@ -53,19 +56,34 @@ PopupWindow {
         menu: root.menuHandle
     }
 
+    // 1. Outside dismiss background
+    MouseArea {
+        id: outsideDismissArea
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onClicked: root.close()
+    }
+
+    // 2. Card popup positioned relative to targetX
     Rectangle {
         id: card
-        anchors.fill: parent
-        anchors.margins: 4
-
-        implicitWidth: entriesColumn.implicitWidth + 16
-        implicitHeight: entriesColumn.implicitHeight + 16
+        x: Math.max(10, Math.min(root.targetX, (root.screen?.width ?? 1360) - width - 10))
+        y: 6
+        width: Math.max(180, entriesColumn.implicitWidth + 24)
+        height: entriesColumn.implicitHeight + 16
 
         radius: 16
         color: Theme.surfaceContainerHigh
         border.width: 1
         border.color: Theme.outlineVariant
         clip: true
+
+        // Absorb clicks on empty card areas so outside dismiss is not triggered
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+            onClicked: {}
+        }
 
         ColumnLayout {
             id: entriesColumn
@@ -114,6 +132,9 @@ PopupWindow {
 
                             onClicked: {
                                 if (!delegateItem.modelData.enabled) return;
+                                if (delegateItem.modelData.hasChildren) {
+                                    // Submenu support if available
+                                }
                                 delegateItem.modelData.triggered();
                                 root.close();
                             }

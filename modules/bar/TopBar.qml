@@ -136,6 +136,7 @@ PanelWindow {
 
                 TrayPill {
                     id: trayPill
+                    screenTarget: root.screenTarget
                     visible: (SystemTray.items.values.length > 0) || SystemStats.deckActive
                 }
 

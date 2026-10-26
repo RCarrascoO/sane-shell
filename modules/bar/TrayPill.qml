@@ -11,6 +11,9 @@ import Quickshell.Widgets
 Rectangle {
     id: root
 
+    property var screenTarget: null
+    property var activeMenu: null
+
     visible: (SystemTray.items.values.length > 0) || SystemStats.deckActive
     implicitHeight: 26
     implicitWidth: visible ? (trayRow.implicitWidth + 16) : 0
@@ -42,11 +45,12 @@ Rectangle {
                 TrayMenuPopup {
                     id: trayMenu
                     menuHandle: trayItemArea.modelData.menu
-                    anchor.window: trayItemArea.QsWindow.window
-                    anchor.item: trayItemArea
-                    anchor.gravity: Edges.Bottom
-                    anchor.edges: Edges.Bottom
-                    anchor.adjustment: PopupAdjustment.SlideX
+                    screen: root.screenTarget ?? null
+                    onVisibleChanged: {
+                        if (!visible && root.activeMenu === trayMenu) {
+                            root.activeMenu = null;
+                        }
+                    }
                 }
 
                 onClicked: mouse => {
@@ -55,10 +59,17 @@ Rectangle {
                     } else if (mouse.button === Qt.MiddleButton) {
                         trayItemArea.modelData.secondaryActivate();
                     } else if (mouse.button === Qt.RightButton && trayItemArea.modelData.hasMenu) {
+                        if (root.activeMenu && root.activeMenu !== trayMenu) {
+                            root.activeMenu.close();
+                        }
                         if (trayMenu.visible) {
                             trayMenu.close();
+                            root.activeMenu = null;
                         } else {
+                            const pos = trayItemArea.mapToItem(null, 0, 0);
+                            trayMenu.targetX = pos.x - 60;
                             trayMenu.open();
+                            root.activeMenu = trayMenu;
                         }
                     }
                 }
