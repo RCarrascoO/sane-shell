@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -73,8 +74,14 @@ type WorkspacesState struct {
 }
 
 type MediaState struct {
-	Title  string `json:"title"`
-	Status string `json:"status"`
+	Player      string  `json:"player"`
+	Title       string  `json:"title"`
+	Artist      string  `json:"artist"`
+	Album       string  `json:"album"`
+	ArtURL      string  `json:"art_url"`
+	Status      string  `json:"status"`
+	PositionSec float64 `json:"position_sec"`
+	LengthSec   float64 `json:"length_sec"`
 }
 
 type AgyBucket struct {
@@ -368,7 +375,22 @@ func getPhoneState() PhoneState {
 	}
 	lastPhoneCheck = time.Now()
 
-	out, err := exec.Command("adb", "shell", "dumpsys battery | grep -E 'level|status'").Output()
+	// Target primary phone (Huawei Mate 20 Lite), with dynamic fallback
+	serial := "DVR0219131009982"
+	out, err := exec.Command("adb", "-s", serial, "shell", "dumpsys battery | grep -E 'level|status'").Output()
+	if err != nil {
+		outDevices, _ := exec.Command("adb", "devices").Output()
+		for _, l := range strings.Split(string(outDevices), "\n") {
+			f := strings.Fields(l)
+			if len(f) >= 2 && f[1] == "device" {
+				out, err = exec.Command("adb", "-s", f[0], "shell", "dumpsys battery | grep -E 'level|status'").Output()
+				if err == nil {
+					break
+				}
+			}
+		}
+	}
+
 	if err != nil {
 		cachedPhoneState = PhoneState{Connected: false}
 		return cachedPhoneState
@@ -609,25 +631,95 @@ func getAgyState(forceRefresh bool) AgyState {
 // Media State (playerctl)
 // -------------------------------------------------------------
 
-func getMediaState() MediaState {
-	cmdStatus := exec.Command("playerctl", "status")
-	outStatus, _ := cmdStatus.Output()
-	status := strings.TrimSpace(string(outStatus))
+var (
+	lastArtURL  string
+	lastArtLock sync.Mutex
+)
 
-	var title string
-	if status != "" {
-		cmdMeta := exec.Command("playerctl", "metadata", "--format", "{{title}} - {{artist}}")
-		outMeta, _ := cmdMeta.Output()
-		title = strings.TrimSpace(string(outMeta))
-		if strings.HasSuffix(title, " - ") {
-			title = strings.TrimSuffix(title, " - ")
+func getMediaState() MediaState {
+	cmdMeta := exec.Command("playerctl", "metadata", "--format", "{{playerName}};;{{status}};;{{title}};;{{artist}};;{{album}};;{{mpris:artUrl}};;{{mpris:length}}")
+	outMeta, err := cmdMeta.Output()
+	if err != nil || len(outMeta) == 0 {
+		return MediaState{
+			Status: "Stopped",
 		}
 	}
 
-	return MediaState{
-		Title:  title,
-		Status: status,
+	parts := strings.Split(strings.TrimSpace(string(outMeta)), ";;")
+	if len(parts) < 7 {
+		return MediaState{
+			Status: "Stopped",
+		}
 	}
+
+	player := parts[0]
+	status := parts[1]
+	title := parts[2]
+	artist := parts[3]
+	album := parts[4]
+	artURL := parts[5]
+	lengthStr := parts[6]
+
+	var lengthSec float64
+	if lengthMicros, err := strconv.ParseInt(lengthStr, 10, 64); err == nil && lengthMicros > 0 {
+		lengthSec = float64(lengthMicros) / 1000000.0
+	}
+
+	var positionSec float64
+	cmdPos := exec.Command("playerctl", "position")
+	if outPos, err := cmdPos.Output(); err == nil {
+		if p, err := strconv.ParseFloat(strings.TrimSpace(string(outPos)), 64); err == nil {
+			positionSec = p
+		}
+	}
+
+	lastArtLock.Lock()
+	lastArtURL = artURL
+	lastArtLock.Unlock()
+
+	return MediaState{
+		Player:      player,
+		Title:       title,
+		Artist:      artist,
+		Album:       album,
+		ArtURL:      artURL,
+		Status:      status,
+		PositionSec: positionSec,
+		LengthSec:   lengthSec,
+	}
+}
+
+func handleArt(w http.ResponseWriter, r *http.Request) {
+	lastArtLock.Lock()
+	artURL := lastArtURL
+	lastArtLock.Unlock()
+
+	if artURL == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	if strings.HasPrefix(artURL, "file://") {
+		filePath := strings.TrimPrefix(artURL, "file://")
+		http.ServeFile(w, r, filePath)
+		return
+	}
+
+	if strings.HasPrefix(artURL, "http://") || strings.HasPrefix(artURL, "https://") {
+		client := &http.Client{Timeout: 3 * time.Second}
+		resp, err := client.Get(artURL)
+		if err != nil {
+			http.Error(w, "Error fetching art", http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		_, _ = io.Copy(w, resp.Body)
+		return
+	}
+
+	http.NotFound(w, r)
 }
 
 // -------------------------------------------------------------
@@ -757,6 +849,30 @@ func handleClientCommand(msg ClientCommand) {
 		if msg.Action != "" {
 			_ = exec.Command("playerctl", msg.Action).Run()
 		}
+
+	case "media-play-pause":
+		_ = exec.Command("playerctl", "play-pause").Run()
+
+	case "media-next":
+		_ = exec.Command("playerctl", "next").Run()
+
+	case "media-prev":
+		_ = exec.Command("playerctl", "previous").Run()
+
+	case "media-seek":
+		_ = exec.Command("playerctl", "position", fmt.Sprintf("%.2f", msg.Volume)).Run()
+
+	case "toggle-stream-mute":
+		if msg.Name != "" {
+			for _, s := range lastStreamsCache {
+				if s.Name == msg.Name {
+					for _, id := range s.IDs {
+						_ = exec.Command("wpctl", "set-mute", id, "toggle").Run()
+					}
+					break
+				}
+			}
+		}
 	}
 }
 
@@ -770,13 +886,20 @@ func startADBWatcher(port int) {
 		reverseArg := fmt.Sprintf("tcp:%s", portStr)
 		for {
 			out, err := exec.Command("adb", "devices").Output()
-			if err == nil && strings.Contains(string(out), "\tdevice") {
-				// Reverse tunnel
-				_ = exec.Command("adb", "reverse", reverseArg, reverseArg).Run()
-				// Automatically enforce Android edge-to-edge immersive mode
-				_ = exec.Command("adb", "shell", "settings put global policy_control immersive.full=*").Run()
-				// Ensure screen stays on while connected to USB
-				_ = exec.Command("adb", "shell", "settings put global stay_on_while_plugged_in 7").Run()
+			if err == nil {
+				lines := strings.Split(string(out), "\n")
+				for _, line := range lines {
+					fields := strings.Fields(line)
+					if len(fields) >= 2 && fields[1] == "device" {
+						serial := fields[0]
+						// Reverse tunnel for each specific device
+						_ = exec.Command("adb", "-s", serial, "reverse", reverseArg, reverseArg).Run()
+						// Automatically enforce Android edge-to-edge immersive mode
+						_ = exec.Command("adb", "-s", serial, "shell", "settings put global policy_control immersive.full=*").Run()
+						// Ensure screen stays on while connected to USB
+						_ = exec.Command("adb", "-s", serial, "shell", "settings put global stay_on_while_plugged_in 7").Run()
+					}
+				}
 			}
 			time.Sleep(6 * time.Second)
 		}
@@ -831,6 +954,20 @@ func main() {
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
 		fileServer.ServeHTTP(w, r)
+	})
+
+	http.HandleFunc("/api/art", handleArt)
+
+	http.HandleFunc("/media", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		mediaHTML, err := webSubFS.Open("media.html")
+		if err != nil {
+			http.Error(w, "Media template not found", http.StatusNotFound)
+			return
+		}
+		defer mediaHTML.Close()
+		_, _ = io.Copy(w, mediaHTML)
 	})
 
 	http.Handle("/", noCacheHandler)

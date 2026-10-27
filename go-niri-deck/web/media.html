@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Now Playing Canvas • sane-deck</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --art-size: min(72vw, 320px);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--md-sys-color-surface-dim, #11111b);
+      color: var(--md-sys-color-on-surface, #cdd6f4);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-glow {
+      position: fixed;
+      top: 15%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(203, 166, 247, 0.22) 0%, rgba(137, 180, 250, 0.1) 50%, transparent 75%);
+      filter: blur(50px);
+      z-index: 0;
+      pointer-events: none;
+      transition: background 1.2s ease, opacity 0.8s ease;
+    }
+
+    .main-canvas {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    /* Top Ambient Header */
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .time-badge {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .digital-clock {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--md-sys-color-on-surface);
+      line-height: 1;
+    }
+
+    .date-text {
+      font-size: 0.82rem;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: 4px;
+      text-transform: capitalize;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(49, 50, 68, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 6px 14px;
+      border-radius: var(--md-shape-corner-full);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--md-sys-color-outline);
+      transition: background 0.3s ease;
+    }
+
+    .status-dot.active {
+      background: var(--md-sys-color-success);
+      box-shadow: 0 0 10px var(--md-sys-color-success);
+    }
+
+    /* Album Art Section */
+    .art-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 14px 0 16px;
+      position: relative;
+    }
+
+    .art-card {
+      width: var(--art-size);
+      height: var(--art-size);
+      border-radius: 28px;
+      overflow: hidden;
+      background: var(--md-sys-color-surface-container);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 32px rgba(203, 166, 247, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .art-card.playing {
+      transform: scale(1.02);
+    }
+
+    .art-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.4s ease;
+    }
+
+    .art-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--md-sys-color-outline);
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #181825 0%, #1e1e2e 100%);
+    }
+
+    .art-placeholder svg {
+      width: 64px;
+      height: 64px;
+      opacity: 0.5;
+    }
+
+    /* Track Meta */
+    .track-meta {
+      text-align: center;
+      margin-bottom: 12px;
+      padding: 0 12px;
+    }
+
+    .track-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--md-sys-color-on-surface);
+      margin: 0 0 6px 0;
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      letter-spacing: -0.01em;
+    }
+
+    .track-artist {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--md-sys-color-tertiary, #cba6f7);
+      margin: 0 0 4px 0;
+    }
+
+    .track-album {
+      font-size: 0.88rem;
+      color: var(--md-sys-color-on-surface-variant);
+      margin: 0;
+    }
+
+    /* Progress & Scrub Bar */
+    .scrub-container {
+      margin-bottom: 14px;
+      padding: 0 4px;
+    }
+
+    .scrub-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: var(--md-shape-corner-full);
+      background: var(--md-sys-color-surface-container-highest, #45475a);
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      transition: height 0.15s ease;
+    }
+
+    .scrub-slider:active {
+      height: 10px;
+    }
+
+    .scrub-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--md-sys-color-primary, #b4befe);
+      box-shadow: 0 0 10px rgba(180, 190, 254, 0.6);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .scrub-slider:active::-webkit-slider-thumb {
+      transform: scale(1.3);
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    /* Playback Controls */
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    .ctrl-btn {
+      background: var(--md-sys-color-surface-container-high, #313244);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--md-sys-color-on-surface);
+      border-radius: 50%;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ctrl-btn:active {
+      transform: scale(0.92);
+      background: var(--md-sys-color-surface-container-highest);
+    }
+
+    .ctrl-btn.play-pause {
+      width: 72px;
+      height: 72px;
+      background: var(--md-sys-color-tertiary, #cba6f7);
+      color: #11111b;
+      box-shadow: 0 8px 24px rgba(203, 166, 247, 0.35);
+      border: none;
+    }
+
+    .ctrl-btn.play-pause:active {
+      transform: scale(0.92);
+      box-shadow: 0 4px 12px rgba(203, 166, 247, 0.5);
+    }
+
+    .ctrl-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+
+    .ctrl-btn.play-pause svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    /* Volume Row */
+    .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(30, 30, 46, 0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: var(--md-shape-corner-l);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 14px;
+    }
+
+    .vol-icon {
+      color: var(--md-sys-color-on-surface-variant);
+      display: flex;
+      align-items: center;
+    }
+
+    .vol-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 6px;
+      border-radius: var(--md-shape-corner-full);
+      background: var(--md-sys-color-surface-container-highest);
+      outline: none;
+    }
+
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--md-sys-color-secondary, #89b4fa);
+      cursor: pointer;
+    }
+
+    /* Discord / Communications Dock */
+    .discord-card {
+      background: var(--md-sys-color-surface-container, #1e1e2e);
+      border-radius: var(--md-shape-corner-xl, 20px);
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .discord-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .discord-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(88, 101, 242, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #5865F2;
+    }
+
+    .discord-labels {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .discord-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .discord-sub {
+      font-size: 0.76rem;
+      color: var(--md-sys-color-on-surface-variant);
+    }
+
+    .discord-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mic-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--md-shape-corner-full);
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.12s ease;
+      background: var(--md-sys-color-success);
+      color: #11111b;
+    }
+
+    .mic-btn.muted {
+      background: var(--md-sys-color-error, #f38ba8);
+      color: #11111b;
+    }
+
+    .mic-btn:active {
+      transform: scale(0.94);
+    }
+
+    .mic-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Switch to Deck view */
+    .switch-link {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .switch-link a {
+      color: var(--md-sys-color-outline);
+      font-size: 0.75rem;
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: var(--md-shape-corner-full);
+      background: rgba(255, 255, 255, 0.04);
+      transition: color 0.2s ease;
+    }
+
+    .switch-link a:hover {
+      color: var(--md-sys-color-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow" id="ambient-glow"></div>
+
+  <div class="main-canvas">
+    <!-- Header: Clock & Media Status -->
+    <div class="canvas-header">
+      <div class="time-badge">
+        <span class="digital-clock" id="clock-time">--:--</span>
+        <span class="date-text" id="clock-date">Cargando...</span>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="player-badge">Audio</span>
+      </div>
+    </div>
+
+    <!-- Album Art -->
+    <div class="art-wrapper">
+      <div class="art-card" id="art-card">
+        <img id="album-art" class="art-img" src="/api/art" alt="Album Art" style="display: none;">
+        <div id="art-placeholder" class="art-placeholder">
+          <svg viewBox="0 0 24 24">
+            <path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+          <span style="font-size: 0.85rem; font-weight: 500;">Sin música activa</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track Metadata -->
+    <div class="track-meta">
+      <h1 class="track-title" id="track-title">Esperando reproducción</h1>
+      <p class="track-artist" id="track-artist">sane-shell companion</p>
+      <p class="track-album" id="track-album">Samsung Galaxy A10 Canvas</p>
+    </div>
+
+    <!-- Scrub Bar -->
+    <div class="scrub-container">
+      <input type="range" class="scrub-slider" id="scrub-slider" min="0" max="100" value="0">
+      <div class="time-row">
+        <span id="cur-time">0:00</span>
+        <span id="total-time">0:00</span>
+      </div>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="playback-controls">
+      <button class="ctrl-btn" id="btn-prev" title="Anterior">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+        </svg>
+      </button>
+
+      <button class="ctrl-btn play-pause" id="btn-play-pause" title="Reproducir / Pausar">
+        <svg viewBox="0 0 24 24" id="play-icon">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+        <svg viewBox="0 0 24 24" id="pause-icon" style="display: none;">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </button>
+
+      <button class="ctrl-btn" id="btn-next" title="Siguiente">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Volume Bar -->
+    <div class="volume-row">
+      <div class="vol-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+      </div>
+      <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.01" value="0.75">
+    </div>
+
+    <!-- Discord / Vesktop Communications Card -->
+    <div class="discord-card">
+      <div class="discord-info">
+        <div class="discord-icon">
+          <svg width="22" height="22" viewBox="0 0 127.14 96.36">
+            <path fill="currentColor" d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z"/>
+          </svg>
+        </div>
+        <div class="discord-labels">
+          <span class="discord-title">Vesktop</span>
+          <span class="discord-sub" id="discord-sub">Microfono</span>
+        </div>
+      </div>
+
+      <div class="discord-actions">
+        <button class="mic-btn" id="btn-mic">
+          <svg viewBox="0 0 24 24" id="mic-on-icon">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+          <svg viewBox="0 0 24 24" id="mic-off-icon" style="display: none;">
+            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17L12.92 9.11C13.56 8.79 14 8.13 14 7.37V5c0-1.1-.9-2-2-2s-2 .9-2 2v.17l5.98 5.98zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.24-5.3-5H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.14 1.77-.45 2.55-.9L19.73 21 21 19.73 4.27 3z"/>
+          </svg>
+          <span id="mic-btn-text">Abierto</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Switch View Footer Link -->
+    <div class="switch-link">
+      <a href="/">← Ir a sane-deck (Panel Principal)</a>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // Elements
+      const clockTime = document.getElementById('clock-time');
+      const clockDate = document.getElementById('clock-date');
+      const statusDot = document.getElementById('status-dot');
+      const playerBadge = document.getElementById('player-badge');
+      const albumArt = document.getElementById('album-art');
+      const artPlaceholder = document.getElementById('art-placeholder');
+      const artCard = document.getElementById('art-card');
+      const trackTitle = document.getElementById('track-title');
+      const trackArtist = document.getElementById('track-artist');
+      const trackAlbum = document.getElementById('track-album');
+      const scrubSlider = document.getElementById('scrub-slider');
+      const curTime = document.getElementById('cur-time');
+      const totalTime = document.getElementById('total-time');
+      const btnPlayPause = document.getElementById('btn-play-pause');
+      const playIcon = document.getElementById('play-icon');
+      const pauseIcon = document.getElementById('pause-icon');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const volSlider = document.getElementById('vol-slider');
+      const btnMic = document.getElementById('btn-mic');
+      const micOnIcon = document.getElementById('mic-on-icon');
+      const micOffIcon = document.getElementById('mic-off-icon');
+      const micBtnText = document.getElementById('mic-btn-text');
+      const discordSub = document.getElementById('discord-sub');
+
+      let ws = null;
+      let isSeeking = false;
+      let isChangingVol = false;
+      let lastArtURL = "";
+      let currentLengthSec = 0;
+      let currentPosSec = 0;
+      let isPlaying = false;
+      let lastTickTime = Date.now();
+
+      // Clock update
+      function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        clockTime.textContent = `${hours}:${minutes}`;
+
+        const options = { weekday: 'long', day: 'numeric', month: 'short' };
+        clockDate.textContent = now.toLocaleDateString('es-CL', options);
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // Time formatter (seconds -> mm:ss)
+      function fmtTime(sec) {
+        if (!sec || isNaN(sec) || sec < 0) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+      }
+
+      // Smooth Position Interpolator (60fps)
+      setInterval(() => {
+        if (isPlaying && !isSeeking && currentLengthSec > 0) {
+          const now = Date.now();
+          const delta = (now - lastTickTime) / 1000;
+          lastTickTime = now;
+          currentPosSec = Math.min(currentLengthSec, currentPosSec + delta);
+          curTime.textContent = fmtTime(currentPosSec);
+          scrubSlider.value = (currentPosSec / currentLengthSec) * 100;
+        }
+      }, 200);
+
+      // WebSocket Connection
+      function connect() {
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+
+        ws.onopen = () => {
+          statusDot.classList.add('active');
+        };
+
+        ws.onmessage = (evt) => {
+          try {
+            const data = JSON.parse(evt.data);
+            handleState(data);
+          } catch(e) {
+            console.error('State parse error:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          statusDot.classList.remove('active');
+          setTimeout(connect, 1500);
+        };
+      }
+
+      function sendCmd(cmdObj) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(cmdObj));
+        }
+      }
+
+      function handleState(data) {
+        // Media State
+        const m = data.media;
+        if (m) {
+          isPlaying = (m.status === 'Playing');
+          lastTickTime = Date.now();
+
+          // Player Badge
+          playerBadge.textContent = m.player ? (m.player.charAt(0).toUpperCase() + m.player.slice(1)) : 'Multimedia';
+
+          // Play/Pause icon
+          if (isPlaying) {
+            playIcon.style.display = 'none';
+            pauseIcon.style.display = 'block';
+            artCard.classList.add('playing');
+          } else {
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+            artCard.classList.remove('playing');
+          }
+
+          // Metadata
+          if (m.title && m.title.trim() !== '') {
+            trackTitle.textContent = m.title;
+            trackArtist.textContent = m.artist || 'Artista Desconocido';
+            trackAlbum.textContent = m.album || '';
+          } else {
+            trackTitle.textContent = 'Sin reproducción activa';
+            trackArtist.textContent = 'sane-shell companion';
+            trackAlbum.textContent = 'Samsung Galaxy A10 Canvas';
+          }
+
+          // Length & Position
+          currentLengthSec = m.length_sec || 0;
+          currentPosSec = m.position_sec || 0;
+
+          if (!isSeeking) {
+            totalTime.textContent = fmtTime(currentLengthSec);
+            curTime.textContent = fmtTime(currentPosSec);
+            if (currentLengthSec > 0) {
+              scrubSlider.value = (currentPosSec / currentLengthSec) * 100;
+            } else {
+              scrubSlider.value = 0;
+            }
+          }
+
+          // Album Art update
+          if (m.art_url && m.art_url !== lastArtURL) {
+            lastArtURL = m.art_url;
+            albumArt.src = `/api/art?t=${Date.now()}`;
+            albumArt.style.display = 'block';
+            artPlaceholder.style.display = 'none';
+          } else if (!m.art_url && m.status === 'Stopped') {
+            albumArt.style.display = 'none';
+            artPlaceholder.style.display = 'flex';
+          }
+        }
+
+        // Audio State (Master Volume)
+        if (data.audio && !isChangingVol) {
+          volSlider.value = data.audio.master_vol;
+
+          // Mic State
+          const isMuted = data.audio.mic_muted;
+          if (isMuted) {
+            btnMic.classList.add('muted');
+            micOnIcon.style.display = 'none';
+            micOffIcon.style.display = 'block';
+            micBtnText.textContent = 'Silenciado';
+          } else {
+            btnMic.classList.remove('muted');
+            micOnIcon.style.display = 'block';
+            micOffIcon.style.display = 'none';
+            micBtnText.textContent = 'Abierto';
+          }
+
+          // Vesktop stream detection
+          if (data.audio.streams) {
+            const vesktopStream = data.audio.streams.find(s => s.name.toLowerCase().includes('vesktop') || s.name.toLowerCase().includes('discord'));
+            if (vesktopStream) {
+              discordSub.textContent = `En llamada • Vol: ${Math.round(vesktopStream.volume * 100)}%`;
+            } else {
+              discordSub.textContent = 'En espera • Micrófono';
+            }
+          }
+        }
+      }
+
+      // Playback listeners
+      btnPlayPause.addEventListener('click', () => {
+        sendCmd({ cmd: 'media-play-pause' });
+      });
+
+      btnPrev.addEventListener('click', () => {
+        sendCmd({ cmd: 'media-prev' });
+      });
+
+      btnNext.addEventListener('click', () => {
+        sendCmd({ cmd: 'media-next' });
+      });
+
+      // Scrub Slider (Seek)
+      scrubSlider.addEventListener('input', () => {
+        isSeeking = true;
+        if (currentLengthSec > 0) {
+          const seekPos = (scrubSlider.value / 100) * currentLengthSec;
+          curTime.textContent = fmtTime(seekPos);
+        }
+      });
+
+      scrubSlider.addEventListener('change', () => {
+        if (currentLengthSec > 0) {
+          const targetSec = (scrubSlider.value / 100) * currentLengthSec;
+          sendCmd({ cmd: 'media-seek', volume: targetSec });
+        }
+        setTimeout(() => { isSeeking = false; }, 300);
+      });
+
+      // Volume Slider
+      volSlider.addEventListener('input', () => {
+        isChangingVol = true;
+      });
+
+      volSlider.addEventListener('change', () => {
+        sendCmd({ cmd: 'set-master-volume', volume: parseFloat(volSlider.value) });
+        setTimeout(() => { isChangingVol = false; }, 300);
+      });
+
+      // Mic Toggle
+      btnMic.addEventListener('click', () => {
+        sendCmd({ cmd: 'toggle-mic' });
+      });
+
+      // Initial Start
+      connect();
+    })();
+  </script>
+</body>
+</html>
