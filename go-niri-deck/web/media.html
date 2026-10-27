@@ -455,6 +455,42 @@
       color: #11111b;
     }
 
+    .comm-btn.disconnect {
+      background: rgba(243, 139, 168, 0.15);
+      color: #f38ba8;
+      border: 1px solid rgba(243, 139, 168, 0.3);
+      padding: 7px 10px;
+    }
+
+    .comm-btn.disconnect:active {
+      background: #f38ba8;
+      color: #11111b;
+    }
+
+    .comm-btn.hidden {
+      display: none !important;
+    }
+
+    .discord-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--md-sys-color-surface-container-highest, #45475a);
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .discord-status-dot.connected {
+      background: var(--md-sys-color-secondary, #89b4fa);
+    }
+
+    .discord-status-dot.in-voice {
+      background: var(--md-sys-color-success, #a6e3a1);
+      box-shadow: 0 0 8px rgba(166, 227, 161, 0.6);
+    }
+
     .comm-btn svg {
       width: 15px;
       height: 15px;
@@ -620,12 +656,19 @@
             </svg>
           </div>
           <div class="discord-labels">
-            <span class="discord-title">Vesktop</span>
+            <span class="discord-title" id="discord-title"><span class="discord-status-dot" id="discord-status-dot"></span>Vesktop</span>
             <span class="discord-sub" id="discord-sub">Audio & Voz</span>
           </div>
         </div>
 
         <div class="discord-actions">
+          <button class="comm-btn disconnect hidden" id="btn-disconnect" title="Desconectarse del canal de voz">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C3.28 8.91 7.42 7.5 12 7.5s8.72 1.41 11.71 4.17c.39.39.39 1.02 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+            </svg>
+            <span>Salir</span>
+          </button>
+
           <button class="comm-btn deafen" id="btn-deafen" title="Ensordecer / Silenciar llamada">
             <svg viewBox="0 0 24 24">
               <path d="M12 3a9 9 0 0 0-9 9v7c0 1.1.9 2 2 2h4v-8H5v-1a7 7 0 0 1 14 0v1h-4v8h4c1.1 0 2-.9 2-2v-7a9 9 0 0 0-9-9z"/>
@@ -690,6 +733,9 @@
       const micBtnText = document.getElementById('mic-btn-text');
       const btnDeafen = document.getElementById('btn-deafen');
       const deafenText = document.getElementById('deafen-text');
+      const discordTitle = document.getElementById('discord-title');
+      const discordStatusDot = document.getElementById('discord-status-dot');
+      const btnDisconnect = document.getElementById('btn-disconnect');
       const discordSub = document.getElementById('discord-sub');
       const discordVolSlider = document.getElementById('discord-vol-slider');
       const discordVolBadge = document.getElementById('discord-vol-badge');
@@ -845,25 +891,66 @@
           }
         }
 
-        // Master Audio State
+        // Discord State (from Vesktop plugin or PipeWire fallback)
+        let discordActiveFromPlugin = false;
+        if (data.discord && data.discord.connected) {
+          discordActiveFromPlugin = true;
+          const d = data.discord;
+          btnFocusVesktop.style.opacity = '1';
+          if (d.in_voice) {
+            discordTitle.innerHTML = `<span class="discord-status-dot in-voice"></span>${d.channel ? '#' + d.channel : 'Voz Activa'}`;
+            discordSub.textContent = d.guild ? `${d.guild} • Voz activa` : 'En canal de voz';
+            btnDisconnect.classList.remove('hidden');
+          } else {
+            discordTitle.innerHTML = `<span class="discord-status-dot connected"></span>Vesktop`;
+            discordSub.textContent = 'En línea • Sin llamada';
+            btnDisconnect.classList.add('hidden');
+          }
+
+          // Self Mute (Discord internal)
+          if (d.self_mute) {
+            btnMic.classList.add('muted');
+            micOnIcon.style.display = 'none';
+            micOffIcon.style.display = 'block';
+            micBtnText.textContent = 'Mute';
+          } else {
+            btnMic.classList.remove('muted');
+            micOnIcon.style.display = 'block';
+            micOffIcon.style.display = 'none';
+            micBtnText.textContent = 'Mic';
+          }
+
+          // Self Deafen (Discord internal)
+          if (d.self_deaf) {
+            btnDeafen.classList.add('active');
+            deafenText.textContent = 'Sordo';
+          } else {
+            btnDeafen.classList.remove('active');
+            deafenText.textContent = 'Sordo';
+          }
+        }
+
+        // Master Audio State & Hardware/PipeWire Fallbacks
         if (data.audio && !isChangingVol) {
           const masterPct = Math.round(data.audio.master_vol * 100);
           volSlider.value = data.audio.master_vol;
           volBadge.textContent = `${masterPct}%`;
           updateSliderFill(volSlider, masterPct, 'var(--md-sys-color-secondary, #89b4fa)', 'var(--md-sys-color-surface-container-highest, #45475a)');
 
-          // Hardware Mic State
-          const isMuted = data.audio.mic_muted;
-          if (isMuted) {
-            btnMic.classList.add('muted');
-            micOnIcon.style.display = 'none';
-            micOffIcon.style.display = 'block';
-            micBtnText.textContent = 'Silenciado';
-          } else {
-            btnMic.classList.remove('muted');
-            micOnIcon.style.display = 'block';
-            micOffIcon.style.display = 'none';
-            micBtnText.textContent = 'Abierto';
+          // Fallback mic state if Vesktop plugin is not connected
+          if (!discordActiveFromPlugin) {
+            const isMuted = data.audio.mic_muted;
+            if (isMuted) {
+              btnMic.classList.add('muted');
+              micOnIcon.style.display = 'none';
+              micOffIcon.style.display = 'block';
+              micBtnText.textContent = 'Silenciado';
+            } else {
+              btnMic.classList.remove('muted');
+              micOnIcon.style.display = 'block';
+              micOffIcon.style.display = 'none';
+              micBtnText.textContent = 'Abierto';
+            }
           }
 
           // Vesktop stream detection
@@ -871,14 +958,18 @@
             const vesktopStream = data.audio.streams.find(s => s.name.toLowerCase().includes('vesktop') || s.name.toLowerCase().includes('discord'));
             if (vesktopStream) {
               vesktopMuted = vesktopStream.muted;
-              if (vesktopMuted) {
-                btnDeafen.classList.add('active');
-                deafenText.textContent = 'Enmudecido';
-                discordSub.textContent = 'Llamada silenciada';
-              } else {
-                btnDeafen.classList.remove('active');
-                deafenText.textContent = 'Sordo';
-                discordSub.textContent = `En llamada • Vol: ${Math.round(vesktopStream.volume * 100)}%`;
+              if (!discordActiveFromPlugin) {
+                if (vesktopMuted) {
+                  btnDeafen.classList.add('active');
+                  deafenText.textContent = 'Enmudecido';
+                  discordSub.textContent = 'Llamada silenciada';
+                } else {
+                  btnDeafen.classList.remove('active');
+                  deafenText.textContent = 'Sordo';
+                  discordSub.textContent = `En llamada • Vol: ${Math.round(vesktopStream.volume * 100)}%`;
+                }
+                discordTitle.innerHTML = `<span class="discord-status-dot connected"></span>Vesktop`;
+                btnDisconnect.classList.add('hidden');
               }
 
               if (!isChangingDiscordVol) {
@@ -888,9 +979,13 @@
                 updateSliderFill(discordVolSlider, (vesktopStream.volume / 1.5) * 100, '#5865F2', 'var(--md-sys-color-surface-container-highest, #45475a)');
               }
             } else {
-              discordSub.textContent = 'En espera • Micrófono';
-              btnDeafen.classList.remove('active');
-              deafenText.textContent = 'Sordo';
+              if (!discordActiveFromPlugin) {
+                discordTitle.innerHTML = `<span class="discord-status-dot"></span>Vesktop`;
+                discordSub.textContent = 'Desconectado';
+                btnDeafen.classList.remove('active');
+                deafenText.textContent = 'Sordo';
+                btnDisconnect.classList.add('hidden');
+              }
             }
           }
         }
@@ -959,12 +1054,17 @@
 
       // Mic Toggle
       btnMic.addEventListener('click', () => {
-        sendCmd({ cmd: 'toggle-mic' });
+        sendCmd({ cmd: 'discord-toggle-mute' });
       });
 
-      // Deafen (Mute Vesktop Stream)
+      // Deafen
       btnDeafen.addEventListener('click', () => {
-        sendCmd({ cmd: 'toggle-stream-mute', name: 'vesktop' });
+        sendCmd({ cmd: 'discord-toggle-deaf' });
+      });
+
+      // Disconnect Voice Call
+      btnDisconnect.addEventListener('click', () => {
+        sendCmd({ cmd: 'discord-disconnect' });
       });
 
       // Focus Vesktop App

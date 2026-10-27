@@ -110,6 +110,15 @@ type AgyState struct {
 	Groups            []AgyGroup `json:"groups"`
 }
 
+type DiscordState struct {
+	Connected bool   `json:"connected"`
+	InVoice   bool   `json:"in_voice"`
+	Guild     string `json:"guild"`
+	Channel   string `json:"channel"`
+	SelfMute  bool   `json:"self_mute"`
+	SelfDeaf  bool   `json:"self_deaf"`
+}
+
 type FullState struct {
 	Telemetry  TelemetryState  `json:"telemetry"`
 	Phone      PhoneState      `json:"phone"`
@@ -117,16 +126,23 @@ type FullState struct {
 	Audio      AudioState      `json:"audio"`
 	Workspaces WorkspacesState `json:"workspaces"`
 	Media      MediaState      `json:"media"`
+	Discord    DiscordState    `json:"discord"`
 }
 
 type ClientCommand struct {
-	Cmd    string  `json:"cmd"`
-	Action string  `json:"action"`
-	ID     string  `json:"id"`
-	Name   string  `json:"name"`
-	Output string  `json:"output"`
-	Idx    int     `json:"idx"`
-	Volume float64 `json:"volume"`
+	Cmd       string  `json:"cmd"`
+	Action    string  `json:"action"`
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Output    string  `json:"output"`
+	Idx       int     `json:"idx"`
+	Volume    float64 `json:"volume"`
+	Connected bool    `json:"connected"`
+	InVoice   bool    `json:"in_voice"`
+	Guild     string  `json:"guild"`
+	Channel   string  `json:"channel"`
+	SelfMute  bool    `json:"self_mute"`
+	SelfDeaf  bool    `json:"self_deaf"`
 }
 
 // -------------------------------------------------------------
@@ -723,6 +739,33 @@ func handleArt(w http.ResponseWriter, r *http.Request) {
 }
 
 // -------------------------------------------------------------
+// Discord State Cache
+// -------------------------------------------------------------
+
+var (
+	discordLock        sync.RWMutex
+	cachedDiscordState DiscordState
+	lastDiscordUpdate  time.Time
+)
+
+func getDiscordState() DiscordState {
+	discordLock.RLock()
+	defer discordLock.RUnlock()
+	if time.Since(lastDiscordUpdate) > 8*time.Second {
+		return DiscordState{Connected: false}
+	}
+	return cachedDiscordState
+}
+
+func updateDiscordState(st DiscordState) {
+	discordLock.Lock()
+	defer discordLock.Unlock()
+	cachedDiscordState = st
+	cachedDiscordState.Connected = true
+	lastDiscordUpdate = time.Now()
+}
+
+// -------------------------------------------------------------
 // Full State Aggregator
 // -------------------------------------------------------------
 
@@ -751,6 +794,7 @@ func collectFullState() FullState {
 		},
 		Workspaces: getWorkspaces(),
 		Media:      getMediaState(),
+		Discord:    getDiscordState(),
 	}
 }
 
@@ -794,8 +838,44 @@ func focusApp(target string) {
 	}
 }
 
-func handleClientCommand(msg ClientCommand) {
+func handleClientCommand(msg ClientCommand, rawMsg []byte, hub *Hub) {
 	switch msg.Cmd {
+	case "discord_state_update":
+		log.Printf("🎙️ [Discord] Estado: voz=%v, canal='%s', guild='%s', mute=%v, deaf=%v", msg.InVoice, msg.Channel, msg.Guild, msg.SelfMute, msg.SelfDeaf)
+		updateDiscordState(DiscordState{
+			Connected: true,
+			InVoice:   msg.InVoice,
+			Guild:     msg.Guild,
+			Channel:   msg.Channel,
+			SelfMute:  msg.SelfMute,
+			SelfDeaf:  msg.SelfDeaf,
+		})
+
+	case "discord-toggle-mute":
+		st := getDiscordState()
+		if st.Connected {
+			hub.broadcast <- rawMsg
+		} else {
+			_ = exec.Command("wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle").Run()
+		}
+
+	case "discord-toggle-deaf":
+		st := getDiscordState()
+		if st.Connected {
+			hub.broadcast <- rawMsg
+		} else {
+			for _, s := range lastStreamsCache {
+				if strings.Contains(strings.ToLower(s.Name), "vesktop") || strings.Contains(strings.ToLower(s.Name), "discord") {
+					for _, id := range s.IDs {
+						_ = exec.Command("wpctl", "set-mute", id, "toggle").Run()
+					}
+					break
+				}
+			}
+		}
+
+	case "discord-disconnect":
+		hub.broadcast <- rawMsg
 	case "set-master-volume":
 		volStr := fmt.Sprintf("%.2f", msg.Volume)
 		_ = exec.Command("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", volStr).Run()
@@ -999,7 +1079,7 @@ func main() {
 				}
 				var cmd ClientCommand
 				if jsonErr := json.Unmarshal(message, &cmd); jsonErr == nil {
-					handleClientCommand(cmd)
+					handleClientCommand(cmd, message, hub)
 					// Quick refresh
 					quickState := collectFullState()
 					lastStreamsCache = quickState.Audio.Streams
