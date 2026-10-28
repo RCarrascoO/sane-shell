@@ -4,6 +4,9 @@
 > Android 16 (*Material 3 Expressive* / Google Pixel UI) + Catppuccin Palette (Mocha & Latte).
 > Construido sobre **Quickshell (Qt6 QML)** y **Go (`agy-tool`)**.
 
+> [!NOTE]
+> **Estado del Proyecto:** En desarrollo activo. Actualmente se encuentra adaptado y optimizado específicamente para el hardware y configuración de monitores de mi equipo personal (dual monitor DVI-D-1 + HDMI-A-1, GPU AMD). La hoja de ruta contempla generalizar la autoconfiguración para hacerlo completamente portable a cualquier setup.
+
 ---
 
 ## 📑 Bitácora y Registro del Trabajo Realizado
